@@ -1,7 +1,8 @@
-
-import React, { useState } from 'react';
-import { User, Mail, LogOut, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, LogOut, CheckCircle, DollarSign, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
+import { useOrders } from '../context/OrderContext';
+import { Input } from '@/components/ui/input';
 
 // Mock user data
 const mockUser = {
@@ -13,6 +14,14 @@ const mockUser = {
 
 const ProfileInfo: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const { balance, setBalance, holdings } = useOrders();
+  const [balanceInput, setBalanceInput] = useState(balance.toString());
+  const [isEditingBalance, setIsEditingBalance] = useState(false);
+
+  // Update balance input when the actual balance changes
+  useEffect(() => {
+    setBalanceInput(balance.toFixed(2));
+  }, [balance]);
 
   const handleLogout = () => {
     setIsLoggedIn(false);
@@ -26,6 +35,21 @@ const ProfileInfo: React.FC = () => {
     toast.success('Logged in successfully', {
       icon: <CheckCircle className="h-4 w-4" />,
     });
+  };
+
+  const handleBalanceSubmit = () => {
+    const newBalance = parseFloat(balanceInput);
+    if (!isNaN(newBalance) && newBalance >= 0) {
+      setBalance(newBalance);
+      setIsEditingBalance(false);
+      toast.success('Account balance updated', {
+        description: `New balance: $${newBalance.toFixed(2)}`,
+      });
+    } else {
+      toast.error('Invalid balance', {
+        description: 'Please enter a valid positive number',
+      });
+    }
   };
 
   if (!isLoggedIn) {
@@ -90,6 +114,78 @@ const ProfileInfo: React.FC = () => {
       </div>
       
       <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">Account Balance</h3>
+          <div className="glass rounded-xl p-4">
+            {isEditingBalance ? (
+              <div className="flex items-center space-x-2">
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+                    <DollarSign className="h-4 w-4 text-gray-500" />
+                  </div>
+                  <Input
+                    type="number"
+                    value={balanceInput}
+                    onChange={(e) => setBalanceInput(e.target.value)}
+                    className="pl-8"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <button
+                  onClick={handleBalanceSubmit}
+                  className="px-3 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 transition-colors"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => {
+                    setBalanceInput(balance.toFixed(2));
+                    setIsEditingBalance(false);
+                  }}
+                  className="px-3 py-2 bg-gray-200 text-gray-700 rounded-md text-sm hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <DollarSign className="h-5 w-5 text-primary mr-2" />
+                  <span className="text-lg font-semibold">${balance.toFixed(2)}</span>
+                </div>
+                <button
+                  onClick={() => setIsEditingBalance(true)}
+                  className="text-sm text-primary hover:text-primary/80 transition-colors"
+                >
+                  Edit
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">Stock Holdings</h3>
+          <div className="glass rounded-xl p-4">
+            {holdings.length > 0 ? (
+              <div className="space-y-3">
+                {holdings.map((holding) => (
+                  <div key={holding.ticker} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                    <div className="flex items-center">
+                      <Briefcase className="h-4 w-4 text-gray-500 mr-2" />
+                      <span className="font-medium">{holding.ticker}</span>
+                    </div>
+                    <span className="text-sm">{holding.quantity} shares</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-2">No stock holdings yet</p>
+            )}
+          </div>
+        </div>
+        
         <div>
           <h3 className="text-lg font-medium text-gray-800 mb-2">Account Information</h3>
           <div className="glass rounded-xl p-4 space-y-3">

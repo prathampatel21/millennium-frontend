@@ -1,22 +1,34 @@
 
 import React, { createContext, useState, useContext, ReactNode } from 'react';
+import { toast } from 'sonner';
+import { AlertCircle } from 'lucide-react';
 
 export type OrderType = 'Buy' | 'Sell';
 export type OrderStatus = 'Processing' | 'In-Progress' | 'Completed';
+export type OrderExecutionType = 'Market' | 'Limit';
 
 export interface Order {
   id: string;
   ticker: string;
   type: OrderType;
+  executionType: OrderExecutionType;
   price: number;
   size: number;
   status: OrderStatus;
   timestamp: Date;
 }
 
+interface StockHolding {
+  ticker: string;
+  quantity: number;
+}
+
 interface OrderContextType {
   orders: Order[];
-  addOrder: (order: Omit<Order, 'id' | 'timestamp' | 'status'>) => void;
+  balance: number;
+  setBalance: (balance: number) => void;
+  holdings: StockHolding[];
+  addOrder: (order: Omit<Order, 'id' | 'timestamp' | 'status'>) => boolean;
   updateOrderStatus: (id: string, status: OrderStatus) => void;
   getOrdersByStatus: (status: OrderStatus) => Order[];
   getCompletedOrders: () => Order[];
@@ -38,6 +50,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       id: '1',
       ticker: 'AAPL',
       type: 'Buy',
+      executionType: 'Market',
       price: 174.79,
       size: 10,
       status: 'Completed',
@@ -47,6 +60,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       id: '2',
       ticker: 'AMZN',
       type: 'Sell',
+      executionType: 'Limit',
       price: 178.25,
       size: 5,
       status: 'In-Progress',
@@ -56,6 +70,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       id: '3',
       ticker: 'MSFT',
       type: 'Buy',
+      executionType: 'Market',
       price: 416.38,
       size: 3,
       status: 'Processing',
@@ -65,6 +80,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       id: '4',
       ticker: 'NVDA',
       type: 'Buy',
+      executionType: 'Market',
       price: 950.02,
       size: 2,
       status: 'Completed',
@@ -74,6 +90,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       id: '5',
       ticker: 'TSLA',
       type: 'Sell',
+      executionType: 'Limit',
       price: 177.56,
       size: 15,
       status: 'Completed',
@@ -81,7 +98,66 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     },
   ]);
 
-  const addOrder = (newOrder: Omit<Order, 'id' | 'timestamp' | 'status'>) => {
+  // Initialize account balance and stock holdings
+  const [balance, setBalance] = useState<number>(10000);
+  const [holdings, setHoldings] = useState<StockHolding[]>([
+    { ticker: 'AAPL', quantity: 10 },
+    { ticker: 'MSFT', quantity: 3 },
+    { ticker: 'NVDA', quantity: 2 },
+    { ticker: 'TSLA', quantity: 15 },
+  ]);
+
+  const updateHoldings = (ticker: string, quantity: number, isBuy: boolean) => {
+    setHoldings((prevHoldings) => {
+      const existingHolding = prevHoldings.find(h => h.ticker === ticker);
+      
+      if (existingHolding) {
+        // Update existing holding
+        return prevHoldings.map(h => 
+          h.ticker === ticker 
+            ? { ...h, quantity: isBuy ? h.quantity + quantity : h.quantity - quantity } 
+            : h
+        ).filter(h => h.quantity > 0); // Remove holdings with zero quantity
+      } else if (isBuy) {
+        // Add new holding (only for buys)
+        return [...prevHoldings, { ticker, quantity }];
+      }
+      
+      return prevHoldings;
+    });
+  };
+
+  const validateOrder = (newOrder: Omit<Order, 'id' | 'timestamp' | 'status'>): boolean => {
+    const totalCost = newOrder.price * newOrder.size;
+    
+    if (newOrder.type === 'Buy' && totalCost > balance) {
+      toast.error('Insufficient funds', {
+        description: `You need $${totalCost.toFixed(2)} but only have $${balance.toFixed(2)}`,
+        icon: <AlertCircle className="h-4 w-4" />,
+      });
+      return false;
+    }
+    
+    if (newOrder.type === 'Sell') {
+      const stockHolding = holdings.find(h => h.ticker === newOrder.ticker);
+      if (!stockHolding || stockHolding.quantity < newOrder.size) {
+        toast.error('Insufficient holdings', {
+          description: `You don't have enough ${newOrder.ticker} shares to sell`,
+          icon: <AlertCircle className="h-4 w-4" />,
+        });
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
+  const addOrder = (newOrder: Omit<Order, 'id' | 'timestamp' | 'status'>): boolean => {
+    // Validate the order first
+    if (!validateOrder(newOrder)) {
+      return false;
+    }
+    
     const order: Order = {
       ...newOrder,
       id: Math.random().toString(36).substring(2, 9),
@@ -91,6 +167,11 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     
     setOrders((prevOrders) => [order, ...prevOrders]);
     
+    // Update account balance for 'Buy' orders immediately
+    if (order.type === 'Buy') {
+      setBalance(prev => prev - (order.price * order.size));
+    }
+    
     // Simulate order progress after adding
     setTimeout(() => {
       updateOrderStatus(order.id, 'In-Progress');
@@ -98,8 +179,18 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       // Simulate order completion
       setTimeout(() => {
         updateOrderStatus(order.id, 'Completed');
+        
+        // Update holdings and balance only upon completion
+        if (order.type === 'Buy') {
+          updateHoldings(order.ticker, order.size, true);
+        } else if (order.type === 'Sell') {
+          updateHoldings(order.ticker, order.size, false);
+          setBalance(prev => prev + (order.price * order.size));
+        }
       }, 8000);
     }, 3000);
+    
+    return true;
   };
 
   const updateOrderStatus = (id: string, status: OrderStatus) => {
@@ -122,6 +213,9 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     <OrderContext.Provider
       value={{
         orders,
+        balance,
+        setBalance,
+        holdings,
         addOrder,
         updateOrderStatus,
         getOrdersByStatus,

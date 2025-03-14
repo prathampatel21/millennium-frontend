@@ -2,16 +2,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
-import { ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowRight, AlertCircle, CheckCircle, DollarSign, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
 const OrderForm: React.FC = () => {
   const navigate = useNavigate();
-  const { addOrder } = useOrders();
+  const { addOrder, balance } = useOrders();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     ticker: '',
     type: 'Buy',
+    executionType: 'Market',
     price: '',
     size: '',
   });
@@ -24,9 +25,9 @@ const OrderForm: React.FC = () => {
       newErrors.ticker = 'Ticker is required';
     }
     
-    if (!formData.price) {
-      newErrors.price = 'Price is required';
-    } else if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
+    if (formData.executionType === 'Limit' && !formData.price) {
+      newErrors.price = 'Limit price is required';
+    } else if (formData.executionType === 'Limit' && (isNaN(Number(formData.price)) || Number(formData.price) <= 0)) {
       newErrors.price = 'Price must be a positive number';
     }
     
@@ -59,34 +60,56 @@ const OrderForm: React.FC = () => {
     
     if (!validateForm()) return;
     
+    // For market orders, use a simulated current market price
+    let orderPrice = Number(formData.price);
+    if (formData.executionType === 'Market') {
+      // Simulate a market price based on ticker (in a real app, this would come from an API)
+      const marketPrices: Record<string, number> = {
+        'AAPL': 174.79,
+        'MSFT': 416.38,
+        'NVDA': 950.02,
+        'AMZN': 178.25,
+        'TSLA': 177.56,
+        'GOOG': 170.63,
+        'META': 480.28,
+      };
+      
+      const ticker = formData.ticker.toUpperCase();
+      orderPrice = marketPrices[ticker] || (100 + Math.random() * 200); // Random price for unknown tickers
+    }
+    
     setIsSubmitting(true);
     
     try {
       // Add new order
-      addOrder({
+      const orderSuccess = addOrder({
         ticker: formData.ticker.toUpperCase(),
         type: formData.type as 'Buy' | 'Sell',
-        price: Number(formData.price),
+        executionType: formData.executionType as 'Market' | 'Limit',
+        price: orderPrice,
         size: Number(formData.size),
       });
       
-      toast.success('Order submitted successfully', {
-        description: `${formData.type} order for ${formData.size} ${formData.ticker.toUpperCase()} at $${formData.price}`,
-        icon: <CheckCircle className="h-4 w-4" />,
-      });
-      
-      // Reset form
-      setFormData({
-        ticker: '',
-        type: 'Buy',
-        price: '',
-        size: '',
-      });
-      
-      // Navigate to orders page after short delay
-      setTimeout(() => {
-        navigate('/orders');
-      }, 1500);
+      if (orderSuccess) {
+        toast.success('Order submitted successfully', {
+          description: `${formData.type} ${formData.executionType} order for ${formData.size} ${formData.ticker.toUpperCase()} at $${orderPrice.toFixed(2)}`,
+          icon: <CheckCircle className="h-4 w-4" />,
+        });
+        
+        // Reset form
+        setFormData({
+          ticker: '',
+          type: 'Buy',
+          executionType: 'Market',
+          price: '',
+          size: '',
+        });
+        
+        // Navigate to orders page after short delay
+        setTimeout(() => {
+          navigate('/orders');
+        }, 1500);
+      }
     } catch (error) {
       toast.error('Failed to submit order', {
         description: 'Please try again later',
@@ -100,6 +123,11 @@ const OrderForm: React.FC = () => {
   return (
     <div className="w-full max-w-md mx-auto glass rounded-2xl p-6 animate-fade-in">
       <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="text-sm text-gray-500 mb-2 flex items-center">
+          <DollarSign className="h-4 w-4 mr-1" />
+          Available balance: <span className="font-medium ml-1">${balance.toFixed(2)}</span>
+        </div>
+        
         <div className="space-y-1">
           <label htmlFor="ticker" className="block text-sm font-medium text-gray-700">
             Ticker Symbol
@@ -140,33 +168,57 @@ const OrderForm: React.FC = () => {
         </div>
         
         <div className="space-y-1">
-          <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-            Price (USD)
+          <label htmlFor="executionType" className="block text-sm font-medium text-gray-700">
+            Execution Type
           </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <span className="text-gray-500">$</span>
-            </div>
-            <input
-              id="price"
-              name="price"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={formData.price}
-              onChange={handleChange}
-              className={`form-input pl-8 ${errors.price ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : ''}`}
-              disabled={isSubmitting}
-            />
-          </div>
-          {errors.price && (
-            <p className="text-red-500 text-xs mt-1 flex items-center">
-              <AlertCircle className="w-3 h-3 mr-1" />
-              {errors.price}
-            </p>
-          )}
+          <select
+            id="executionType"
+            name="executionType"
+            value={formData.executionType}
+            onChange={handleChange}
+            className="form-input"
+            disabled={isSubmitting}
+          >
+            <option value="Market">Market Order</option>
+            <option value="Limit">Limit Order</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            {formData.executionType === 'Market' 
+              ? 'Market orders execute immediately at the current market price' 
+              : 'Limit orders execute only at the specified price or better'}
+          </p>
         </div>
+        
+        {formData.executionType === 'Limit' && (
+          <div className="space-y-1">
+            <label htmlFor="price" className="block text-sm font-medium text-gray-700">
+              Limit Price (USD)
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <span className="text-gray-500">$</span>
+              </div>
+              <input
+                id="price"
+                name="price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={formData.price}
+                onChange={handleChange}
+                className={`form-input pl-8 ${errors.price ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : ''}`}
+                disabled={isSubmitting}
+              />
+            </div>
+            {errors.price && (
+              <p className="text-red-500 text-xs mt-1 flex items-center">
+                <AlertCircle className="w-3 h-3 mr-1" />
+                {errors.price}
+              </p>
+            )}
+          </div>
+        )}
         
         <div className="space-y-1">
           <label htmlFor="size" className="block text-sm font-medium text-gray-700">

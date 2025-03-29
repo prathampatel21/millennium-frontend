@@ -1,15 +1,7 @@
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+
+import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
-import { 
-  getUser, 
-  getOrders, 
-  createOrder as apiCreateOrder, 
-  updateOrderStatus as apiUpdateOrderStatus,
-  getUserAssets,
-  updateUserBalance as apiUpdateUserBalance
-} from '../services/apiService';
-import { useAuth } from './AuthContext';
 
 export type OrderType = 'Buy' | 'Sell';
 export type OrderStatus = 'Processing' | 'In-Progress' | 'Completed';
@@ -40,8 +32,6 @@ interface OrderContextType {
   updateOrderStatus: (id: string, status: OrderStatus) => void;
   getOrdersByStatus: (status: OrderStatus) => Order[];
   getCompletedOrders: () => Order[];
-  userId: number;
-  refreshData: () => Promise<void>;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -55,57 +45,87 @@ export const useOrders = () => {
 };
 
 export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { currentUser, isAuthenticated } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<Order[]>([
+    {
+      id: '1',
+      ticker: 'AAPL',
+      type: 'Buy',
+      executionType: 'Market',
+      price: 174.79,
+      size: 10,
+      status: 'Completed',
+      timestamp: new Date(Date.now() - 86400000 * 3), // 3 days ago
+    },
+    {
+      id: '2',
+      ticker: 'AMZN',
+      type: 'Sell',
+      executionType: 'Limit',
+      price: 178.25,
+      size: 5,
+      status: 'In-Progress',
+      timestamp: new Date(Date.now() - 3600000), // 1 hour ago
+    },
+    {
+      id: '3',
+      ticker: 'MSFT',
+      type: 'Buy',
+      executionType: 'Market',
+      price: 416.38,
+      size: 3,
+      status: 'Processing',
+      timestamp: new Date(), // Now
+    },
+    {
+      id: '4',
+      ticker: 'NVDA',
+      type: 'Buy',
+      executionType: 'Market',
+      price: 950.02,
+      size: 2,
+      status: 'Completed',
+      timestamp: new Date(Date.now() - 86400000), // 1 day ago
+    },
+    {
+      id: '5',
+      ticker: 'TSLA',
+      type: 'Sell',
+      executionType: 'Limit',
+      price: 177.56,
+      size: 15,
+      status: 'Completed',
+      timestamp: new Date(Date.now() - 86400000 * 2), // 2 days ago
+    },
+  ]);
+
+  // Initialize account balance and stock holdings
   const [balance, setBalance] = useState<number>(10000);
-  const [holdings, setHoldings] = useState<StockHolding[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  
-  const userId = currentUser?.userID || 1;
+  const [holdings, setHoldings] = useState<StockHolding[]>([
+    { ticker: 'AAPL', quantity: 10 },
+    { ticker: 'MSFT', quantity: 3 },
+    { ticker: 'NVDA', quantity: 2 },
+    { ticker: 'TSLA', quantity: 15 },
+  ]);
 
-  const refreshData = async () => {
-    if (!isAuthenticated) {
-      setOrders([]);
-      setBalance(0);
-      setHoldings([]);
-      setIsLoading(false);
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
+  const updateHoldings = (ticker: string, quantity: number, isBuy: boolean) => {
+    setHoldings((prevHoldings) => {
+      const existingHolding = prevHoldings.find(h => h.ticker === ticker);
       
-      // Fetch user data
-      const userData = await getUser(userId);
-      setBalance(userData.account_balance);
+      if (existingHolding) {
+        // Update existing holding
+        return prevHoldings.map(h => 
+          h.ticker === ticker 
+            ? { ...h, quantity: isBuy ? h.quantity + quantity : h.quantity - quantity } 
+            : h
+        ).filter(h => h.quantity > 0); // Remove holdings with zero quantity
+      } else if (isBuy) {
+        // Add new holding (only for buys)
+        return [...prevHoldings, { ticker, quantity }];
+      }
       
-      // Fetch user's orders
-      const ordersData = await getOrders(userId);
-      setOrders(ordersData.map(order => ({
-        ...order,
-        timestamp: new Date(order.timestamp)
-      })));
-      
-      // Fetch user's assets
-      const assetsData = await getUserAssets(userId);
-      setHoldings(assetsData.map(asset => ({
-        ticker: asset.ticker,
-        quantity: asset.quantity
-      })));
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Failed to load data', {
-        description: 'Please check your connection to the backend server',
-        icon: <AlertCircle className="h-4 w-4" />,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+      return prevHoldings;
+    });
   };
-
-  useEffect(() => {
-    refreshData();
-  }, [userId, isAuthenticated]);
 
   const validateOrder = (newOrder: Omit<Order, 'id' | 'timestamp' | 'status'>): boolean => {
     const totalCost = newOrder.price * newOrder.size;
@@ -133,62 +153,42 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const addOrder = (newOrder: Omit<Order, 'id' | 'timestamp' | 'status'>): boolean => {
-    if (!isAuthenticated) {
-      toast.error('Authentication required', {
-        description: 'Please log in to place orders',
-        icon: <AlertCircle className="h-4 w-4" />,
-      });
-      return false;
-    }
-    
+    // Validate the order first
     if (!validateOrder(newOrder)) {
       return false;
     }
     
-    const tempOrder: Order = {
+    const order: Order = {
       ...newOrder,
-      id: `temp-${Math.random().toString(36).substring(2, 9)}`,
+      id: Math.random().toString(36).substring(2, 9),
       timestamp: new Date(),
       status: 'Processing',
     };
     
-    setOrders((prevOrders) => [tempOrder, ...prevOrders]);
+    setOrders((prevOrders) => [order, ...prevOrders]);
     
-    apiCreateOrder({
-      ticker: newOrder.ticker,
-      size: newOrder.size,
-      type: newOrder.type,
-      executionType: newOrder.executionType,
-      price: newOrder.price,
-      userID: userId
-    })
-      .then(createdOrder => {
-        setOrders(prevOrders => 
-          prevOrders.map(order => 
-            order.id === tempOrder.id 
-              ? { ...createdOrder, timestamp: new Date(createdOrder.timestamp) } 
-              : order
-          )
-        );
+    // Update account balance for 'Buy' orders immediately
+    if (order.type === 'Buy') {
+      setBalance(prev => prev - (order.price * order.size));
+    }
+    
+    // Simulate order progress after adding
+    setTimeout(() => {
+      updateOrderStatus(order.id, 'In-Progress');
+      
+      // Simulate order completion
+      setTimeout(() => {
+        updateOrderStatus(order.id, 'Completed');
         
-        setTimeout(() => {
-          updateOrderStatus(createdOrder.id, 'In-Progress');
-          
-          setTimeout(() => {
-            updateOrderStatus(createdOrder.id, 'Completed');
-          }, 8000);
-        }, 3000);
-      })
-      .catch(error => {
-        console.error('Error creating order:', error);
-        toast.error('Failed to create order', {
-          description: error.message || 'Please try again later',
-          icon: <AlertCircle className="h-4 w-4" />,
-        });
-        
-        setOrders(prevOrders => prevOrders.filter(order => order.id !== tempOrder.id));
-        return false;
-      });
+        // Update holdings and balance only upon completion
+        if (order.type === 'Buy') {
+          updateHoldings(order.ticker, order.size, true);
+        } else if (order.type === 'Sell') {
+          updateHoldings(order.ticker, order.size, false);
+          setBalance(prev => prev + (order.price * order.size));
+        }
+      }, 8000);
+    }, 3000);
     
     return true;
   };
@@ -199,20 +199,6 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         order.id === id ? { ...order, status } : order
       )
     );
-    
-    apiUpdateOrderStatus(id, status)
-      .then(() => {
-        if (status === 'Completed') {
-          refreshData();
-        }
-      })
-      .catch(error => {
-        console.error('Error updating order status:', error);
-        toast.error('Failed to update order status', {
-          description: 'Please try again later',
-          icon: <AlertCircle className="h-4 w-4" />,
-        });
-      });
   };
 
   const getOrdersByStatus = (status: OrderStatus) => {
@@ -223,47 +209,17 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return orders.filter((order) => order.status === 'Completed');
   };
 
-  const handleSetBalance = async (newBalance: number) => {
-    if (!isAuthenticated) {
-      toast.error('Authentication required', {
-        description: 'Please log in to update your balance',
-        icon: <AlertCircle className="h-4 w-4" />,
-      });
-      return;
-    }
-    
-    setBalance(newBalance);
-    
-    try {
-      await apiUpdateUserBalance(userId, newBalance);
-    } catch (error) {
-      console.error('Error updating balance:', error);
-      toast.error('Failed to update balance', {
-        description: 'Please try again later',
-        icon: <AlertCircle className="h-4 w-4" />,
-      });
-      
-      refreshData();
-    }
-  };
-
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
-  }
-
   return (
     <OrderContext.Provider
       value={{
         orders,
         balance,
-        setBalance: handleSetBalance,
+        setBalance,
         holdings,
         addOrder,
         updateOrderStatus,
         getOrdersByStatus,
         getCompletedOrders,
-        userId,
-        refreshData,
       }}
     >
       {children}

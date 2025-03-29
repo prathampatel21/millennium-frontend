@@ -1,4 +1,3 @@
-
 import { Order, OrderType, OrderStatus, OrderExecutionType } from '../context/OrderContext';
 
 // Check if we're in a development environment with backend access
@@ -199,14 +198,14 @@ export const createOrder = async (orderData: CreateOrderPayload): Promise<Order>
     if (!isBackendAvailable) {
       // Just return a mock order for now
       return {
-        id: Math.floor(Math.random() * 1000),
+        id: String(Math.floor(Math.random() * 1000)), // Converting number to string
         ticker: orderData.ticker,
         size: orderData.size,
         status: 'Processing',
         type: orderData.type,
         executionType: orderData.executionType,
         price: orderData.price,
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(), // Using actual Date object instead of string
         userID: orderData.userID
       };
     }

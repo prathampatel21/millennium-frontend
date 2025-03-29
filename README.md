@@ -1,28 +1,8 @@
-
 # Welcome to your Lovable project
 
 ## Project info
 
 **URL**: https://lovable.dev/projects/e8e71bf7-c30e-4193-ae34-aba8b5dca0d3
-
-## How to run with Docker (Recommended)
-
-You can easily run the entire application (frontend and backend) using Docker Compose:
-
-```sh
-# Build and start the containers
-docker-compose up
-
-# The application will be available at:
-# - Frontend: http://localhost:8080
-# - Backend API: http://localhost:5000
-```
-
-To stop the application:
-
-```sh
-docker-compose down
-```
 
 ## How can I edit this code?
 
@@ -56,18 +36,6 @@ npm i
 npm run dev
 ```
 
-### Running the Backend Separately
-
-To run just the backend:
-
-```sh
-cd backend
-pip install -r requirements.txt
-python app.py
-```
-
-The Flask server will be available at http://localhost:5000.
-
 **Edit a file directly in GitHub**
 
 - Navigate to the desired file(s).
@@ -84,19 +52,13 @@ The Flask server will be available at http://localhost:5000.
 
 ## What technologies are used for this project?
 
-This project is built with:
+This project is built with .
 
-- **Frontend**: 
-  - Vite
-  - TypeScript
-  - React
-  - shadcn-ui
-  - Tailwind CSS
-  - React Query for API data fetching
-
-- **Backend**:
-  - Flask (Python)
-  - SQLite for database storage
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
 
 ## How can I deploy this project?
 

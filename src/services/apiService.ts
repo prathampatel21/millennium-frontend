@@ -1,3 +1,4 @@
+
 import { Order, OrderType, OrderStatus, OrderExecutionType } from '../context/OrderContext';
 
 const API_URL = 'http://localhost:5000/api';
@@ -8,12 +9,6 @@ export interface User {
   name: string;
   email: string;
   account_balance: number;
-}
-
-export interface RegisterUserPayload {
-  name: string;
-  email: string;
-  account_balance?: number;
 }
 
 // Asset interface
@@ -38,23 +33,6 @@ export const getUser = async (userId: number): Promise<User> => {
   if (!response.ok) {
     throw new Error('Failed to fetch user');
   }
-  return response.json();
-};
-
-export const registerUser = async (userData: RegisterUserPayload): Promise<User> => {
-  const response = await fetch(`${API_URL}/users`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(userData),
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to register user');
-  }
-  
   return response.json();
 };
 

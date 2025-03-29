@@ -3,17 +3,7 @@
 
 This is a Flask-based backend for the trading application. It provides API endpoints for managing users, orders, and assets.
 
-## Setup with Docker (Recommended)
-
-The easiest way to run this backend is using Docker along with the frontend. From the root project directory:
-
-```
-docker-compose up
-```
-
-This will start both the backend and frontend services.
-
-## Manual Setup
+## Setup
 
 1. Install the required packages:
 ```

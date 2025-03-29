@@ -2,13 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, LogOut, CheckCircle, DollarSign, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
 import { Input } from '@/components/ui/input';
 import { getUser } from '../services/apiService';
 
 const ProfileInfo: React.FC = () => {
-  const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(true);
   const { balance, setBalance, holdings, userId, refreshData } = useOrders();
   const [balanceInput, setBalanceInput] = useState(balance.toString());
@@ -114,18 +112,6 @@ const ProfileInfo: React.FC = () => {
             >
               Login
             </button>
-          </div>
-          
-          <div className="text-center mt-4">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <span 
-                className="text-primary cursor-pointer hover:underline"
-                onClick={() => navigate('/register')}
-              >
-                Register here
-              </span>
-            </p>
           </div>
         </div>
       </div>

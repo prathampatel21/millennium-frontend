@@ -32,7 +32,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 const RegisterForm: React.FC = () => {
   const navigate = useNavigate();
-  const { setUserId } = useOrders();
+  const { setCurrentUser } = useOrders();
   const [isLoading, setIsLoading] = React.useState(false);
 
   const form = useForm<FormValues>({
@@ -46,8 +46,17 @@ const RegisterForm: React.FC = () => {
   const onSubmit = async (data: FormValues) => {
     try {
       setIsLoading(true);
-      const user = await registerUser(data);
-      setUserId(user.userID);
+      // Ensure both name and email are required for registerUser
+      const userData = {
+        name: data.name,
+        email: data.email
+      };
+      
+      const user = await registerUser(userData);
+      
+      // Use setCurrentUser instead of setUserId
+      setCurrentUser(user);
+      
       toast.success('Registration successful', {
         description: `Welcome, ${user.name}!`,
       });

@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 
 const OrderForm: React.FC = () => {
   const navigate = useNavigate();
-  const { addOrder, balance } = useOrders();
+  const { addOrder, balance, userId } = useOrders();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     ticker: '',

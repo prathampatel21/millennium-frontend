@@ -1,22 +1,39 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, Mail, LogOut, CheckCircle, DollarSign, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOrders } from '../context/OrderContext';
 import { Input } from '@/components/ui/input';
-
-// Mock user data
-const mockUser = {
-  name: 'John Doe',
-  email: 'john.doe@example.com',
-  joinedDate: new Date(2023, 5, 15),
-  profileImage: null,
-};
+import { getUser } from '../services/apiService';
 
 const ProfileInfo: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
-  const { balance, setBalance, holdings } = useOrders();
+  const { balance, setBalance, holdings, userId, refreshData } = useOrders();
   const [balanceInput, setBalanceInput] = useState(balance.toString());
   const [isEditingBalance, setIsEditingBalance] = useState(false);
+  const [userData, setUserData] = useState({
+    name: 'Loading...',
+    email: 'loading@example.com',
+    joinedDate: new Date(),
+  });
+
+  // Fetch user data
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const user = await getUser(userId);
+        setUserData({
+          name: user.name,
+          email: user.email,
+          joinedDate: new Date(2023, 5, 15), // Hardcoded for demo
+        });
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+    
+    fetchUserData();
+  }, [userId]);
 
   // Update balance input when the actual balance changes
   useEffect(() => {
@@ -32,6 +49,7 @@ const ProfileInfo: React.FC = () => {
 
   const handleLogin = () => {
     setIsLoggedIn(true);
+    refreshData();
     toast.success('Logged in successfully', {
       icon: <CheckCircle className="h-4 w-4" />,
     });
@@ -106,11 +124,12 @@ const ProfileInfo: React.FC = () => {
         <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 text-primary rounded-full mb-4">
           <User className="h-8 w-8" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-800">{mockUser.name}</h2>
+        <h2 className="text-2xl font-bold text-gray-800">{userData.name}</h2>
         <p className="text-gray-500 flex items-center justify-center mt-1">
           <Mail className="h-4 w-4 mr-1" />
-          {mockUser.email}
+          {userData.email}
         </p>
+        <p className="text-xs text-gray-400 mt-1">User ID: {userId}</p>
       </div>
       
       <div className="space-y-6">
@@ -192,7 +211,7 @@ const ProfileInfo: React.FC = () => {
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-500">Member since</span>
               <span className="text-sm font-medium">
-                {mockUser.joinedDate.toLocaleDateString('en-US', {
+                {userData.joinedDate.toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
@@ -201,7 +220,7 @@ const ProfileInfo: React.FC = () => {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-500">User ID</span>
-              <span className="text-sm font-medium">USR-{Math.random().toString(36).substring(2, 10)}</span>
+              <span className="text-sm font-medium">USR-{userId}</span>
             </div>
           </div>
         </div>

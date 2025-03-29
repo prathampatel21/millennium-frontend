@@ -201,12 +201,12 @@ export const createOrder = async (orderData: CreateOrderPayload): Promise<Order>
         id: String(Math.floor(Math.random() * 1000)), // Converting number to string
         ticker: orderData.ticker,
         size: orderData.size,
-        status: 'Processing',
+        status: 'Processing' as OrderStatus,
         type: orderData.type,
         executionType: orderData.executionType,
         price: orderData.price,
-        timestamp: new Date(), // Using actual Date object instead of string
-        userID: orderData.userID
+        timestamp: new Date() // Using actual Date object instead of string
+        // Removed userID property as it's not in the Order interface
       };
     }
     

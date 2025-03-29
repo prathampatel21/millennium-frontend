@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sqlite3
@@ -96,6 +95,48 @@ def get_users():
     
     conn.close()
     return jsonify(result)
+
+@app.route('/api/users', methods=['POST'])
+def create_user():
+    data = request.json
+    
+    required_fields = ['name', 'email']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f'{field} is required'}), 400
+    
+    # Set default balance if not provided
+    if 'account_balance' not in data:
+        data['account_balance'] = 10000.0
+    
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    # Check if email already exists
+    existing_user = cursor.execute('SELECT * FROM users WHERE email = ?', (data['email'],)).fetchone()
+    if existing_user:
+        conn.close()
+        return jsonify({'error': 'Email already registered'}), 400
+    
+    # Insert new user
+    cursor.execute('''
+    INSERT INTO users (name, email, account_balance) 
+    VALUES (?, ?, ?)
+    ''', (data['name'], data['email'], data['account_balance']))
+    
+    user_id = cursor.lastrowid
+    
+    conn.commit()
+    conn.close()
+    
+    # Return the created user
+    return jsonify({
+        'userID': user_id,
+        'name': data['name'],
+        'email': data['email'],
+        'account_balance': data['account_balance']
+    })
 
 @app.route('/api/users/<int:user_id>', methods=['GET'])
 def get_user(user_id):

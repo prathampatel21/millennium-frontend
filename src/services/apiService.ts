@@ -1,4 +1,3 @@
-
 import { Order, OrderType, OrderStatus, OrderExecutionType } from '../context/OrderContext';
 
 const API_URL = 'http://localhost:5000/api';
@@ -17,6 +16,14 @@ export interface Asset {
   userID: number;
   ticker: string;
   quantity: number;
+}
+
+// User registration interface
+export interface UserRegistration {
+  name: string;
+  email: string;
+  password?: string;
+  picture?: string;
 }
 
 // User API
@@ -48,6 +55,26 @@ export const updateUserBalance = async (userId: number, balance: number): Promis
   if (!response.ok) {
     throw new Error('Failed to update user balance');
   }
+};
+
+export const registerUser = async (userData: UserRegistration): Promise<User> => {
+  const response = await fetch(`${API_URL}/users`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      ...userData,
+      account_balance: 10000 // Default balance for new users
+    }),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to register user');
+  }
+  
+  return response.json();
 };
 
 // Order API

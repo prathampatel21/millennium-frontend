@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
@@ -10,6 +9,7 @@ import {
   getUserAssets,
   updateUserBalance as apiUpdateUserBalance
 } from '../services/apiService';
+import { useAuth } from './AuthContext';
 
 export type OrderType = 'Buy' | 'Sell';
 export type OrderStatus = 'Processing' | 'In-Progress' | 'Completed';
@@ -55,14 +55,23 @@ export const useOrders = () => {
 };
 
 export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Default user ID (in a real app, this would come from authentication)
-  const [userId] = useState<number>(1);
+  const { currentUser, isAuthenticated } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [balance, setBalance] = useState<number>(10000);
   const [holdings, setHoldings] = useState<StockHolding[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  
+  const userId = currentUser?.userID || 1;
 
   const refreshData = async () => {
+    if (!isAuthenticated) {
+      setOrders([]);
+      setBalance(0);
+      setHoldings([]);
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       setIsLoading(true);
       
@@ -94,10 +103,9 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
-  // Initial data load
   useEffect(() => {
     refreshData();
-  }, [userId]);
+  }, [userId, isAuthenticated]);
 
   const validateOrder = (newOrder: Omit<Order, 'id' | 'timestamp' | 'status'>): boolean => {
     const totalCost = newOrder.price * newOrder.size;
@@ -125,12 +133,18 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const addOrder = (newOrder: Omit<Order, 'id' | 'timestamp' | 'status'>): boolean => {
-    // Validate the order first
+    if (!isAuthenticated) {
+      toast.error('Authentication required', {
+        description: 'Please log in to place orders',
+        icon: <AlertCircle className="h-4 w-4" />,
+      });
+      return false;
+    }
+    
     if (!validateOrder(newOrder)) {
       return false;
     }
     
-    // Create a temporary order to show in UI immediately
     const tempOrder: Order = {
       ...newOrder,
       id: `temp-${Math.random().toString(36).substring(2, 9)}`,
@@ -140,7 +154,6 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     
     setOrders((prevOrders) => [tempOrder, ...prevOrders]);
     
-    // Send order to API
     apiCreateOrder({
       ticker: newOrder.ticker,
       size: newOrder.size,
@@ -150,7 +163,6 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       userID: userId
     })
       .then(createdOrder => {
-        // Update local orders with the server response
         setOrders(prevOrders => 
           prevOrders.map(order => 
             order.id === tempOrder.id 
@@ -159,11 +171,9 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           )
         );
         
-        // Simulate order progress after adding
         setTimeout(() => {
           updateOrderStatus(createdOrder.id, 'In-Progress');
           
-          // Simulate order completion
           setTimeout(() => {
             updateOrderStatus(createdOrder.id, 'Completed');
           }, 8000);
@@ -176,7 +186,6 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           icon: <AlertCircle className="h-4 w-4" />,
         });
         
-        // Remove the temporary order on error
         setOrders(prevOrders => prevOrders.filter(order => order.id !== tempOrder.id));
         return false;
       });
@@ -185,17 +194,14 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const updateOrderStatus = (id: string, status: OrderStatus) => {
-    // Update the UI immediately
     setOrders((prevOrders) =>
       prevOrders.map((order) =>
         order.id === id ? { ...order, status } : order
       )
     );
     
-    // Update on the server
     apiUpdateOrderStatus(id, status)
       .then(() => {
-        // If completed, refresh all data to ensure consistency
         if (status === 'Completed') {
           refreshData();
         }
@@ -218,11 +224,17 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const handleSetBalance = async (newBalance: number) => {
-    // Update UI immediately
+    if (!isAuthenticated) {
+      toast.error('Authentication required', {
+        description: 'Please log in to update your balance',
+        icon: <AlertCircle className="h-4 w-4" />,
+      });
+      return;
+    }
+    
     setBalance(newBalance);
     
     try {
-      // Update on the server
       await apiUpdateUserBalance(userId, newBalance);
     } catch (error) {
       console.error('Error updating balance:', error);
@@ -231,7 +243,6 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         icon: <AlertCircle className="h-4 w-4" />,
       });
       
-      // Revert on error
       refreshData();
     }
   };

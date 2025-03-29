@@ -2,6 +2,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
+import { getUsers, registerUser } from '../services/apiService';
 
 export interface User {
   userID: number;
@@ -50,13 +51,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // For now, simple check - would be replaced with real API call
-      const response = await fetch('http://localhost:5000/api/users');
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-      
-      const users = await response.json();
+      // Fetch users from API (or mock)
+      const users = await getUsers();
       const user = users.find((u: any) => u.email === email);
       
       if (user) {
@@ -69,6 +65,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         setCurrentUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
+        toast.success('Logged in successfully');
         return true;
       } else {
         toast.error('Invalid credentials', {
@@ -89,34 +86,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const googleLogin = async (): Promise<boolean> => {
     try {
-      // Simulate OAuth popup and redirect
-      const width = 500;
-      const height = 600;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-      
-      // In a real implementation, this would open the Google OAuth URL
-      window.open(
-        'about:blank',
-        'Google Sign In',
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-
       // Simulate successful Google login (mock data)
-      // In a real implementation, this would come from the OAuth response
       const googleUser = {
         name: "Google User",
         email: "google.user@example.com",
         picture: "https://ui-avatars.com/api/?name=Google+User&background=random"
       };
       
-      // Check if user exists in database
-      const response = await fetch('http://localhost:5000/api/users');
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-      
-      const users = await response.json();
+      // Check if user exists
+      const users = await getUsers();
       const existingUser = users.find((u: any) => u.email === googleUser.email);
       
       if (existingUser) {
@@ -134,34 +112,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return true;
       } else {
         // User doesn't exist, register them
-        const registerResponse = await fetch('http://localhost:5000/api/users', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        try {
+          const newUser = await registerUser({
             name: googleUser.name,
-            email: googleUser.email,
-            account_balance: 10000 // Default balance for new users
-          }),
-        });
-        
-        if (!registerResponse.ok) {
-          throw new Error('Failed to register new user');
+            email: googleUser.email
+          });
+          
+          const userData: User = {
+            userID: newUser.userID,
+            name: newUser.name,
+            email: newUser.email,
+            picture: googleUser.picture
+          };
+          
+          setCurrentUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+          toast.success('Account created successfully');
+          return true;
+        } catch (registrationError) {
+          console.error('Google registration error:', registrationError);
+          toast.error('Account creation failed', {
+            description: 'Could not create account with Google',
+            icon: <AlertCircle className="h-4 w-4" />,
+          });
+          return false;
         }
-        
-        const newUser = await registerResponse.json();
-        const userData: User = {
-          userID: newUser.userID,
-          name: newUser.name,
-          email: newUser.email,
-          picture: googleUser.picture
-        };
-        
-        setCurrentUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-        toast.success('Account created successfully');
-        return true;
       }
     } catch (error) {
       console.error('Google login error:', error);
@@ -176,12 +151,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (name: string, email: string, password: string): Promise<boolean> => {
     try {
       // Check if user already exists
-      const checkResponse = await fetch('http://localhost:5000/api/users');
-      if (!checkResponse.ok) {
-        throw new Error('Failed to check for existing users');
-      }
-      
-      const users = await checkResponse.json();
+      const users = await getUsers();
       const existingUser = users.find((u: any) => u.email === email);
       
       if (existingUser) {
@@ -192,24 +162,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
       }
       
-      // In a real app, would hash password before sending
-      const registerResponse = await fetch('http://localhost:5000/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          account_balance: 10000 // Default balance for new users
-        }),
+      // Register new user
+      const newUser = await registerUser({
+        name,
+        email,
+        password
       });
       
-      if (!registerResponse.ok) {
-        throw new Error('Failed to register new user');
-      }
-      
-      const newUser = await registerResponse.json();
       const userData: User = {
         userID: newUser.userID,
         name: newUser.name,

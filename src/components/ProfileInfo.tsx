@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Mail, LogOut, DollarSign, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOrders } from '../context/OrderContext';
@@ -11,13 +11,13 @@ const API_BASE_URL = 'http://127.0.0.1:5000';
 
 const ProfileInfo: React.FC = () => {
   const { user, getUsername, signOut } = useAuth();
-  const { balance, setBalance, holdings } = useOrders();
+  const { balance, setBalance, holdings, refreshUserData } = useOrders();
   const [balanceInput, setBalanceInput] = useState(balance.toString());
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Update balance input when the actual balance changes
-  React.useEffect(() => {
+  useEffect(() => {
     setBalanceInput(balance.toFixed(2));
   }, [balance]);
 
@@ -42,10 +42,13 @@ const ProfileInfo: React.FC = () => {
         
         if (response.data && response.data.new_balance) {
           setBalance(response.data.new_balance);
-          setIsEditingBalance(false);
           toast.success('Account balance updated', {
-            description: `New balance: $${newBalance.toFixed(2)}`,
+            description: `New balance: $${response.data.new_balance.toFixed(2)}`,
           });
+          
+          // Refresh user data to ensure all data is in sync
+          await refreshUserData();
+          setIsEditingBalance(false);
         }
       } catch (error) {
         console.error('Error updating balance:', error);
@@ -61,6 +64,11 @@ const ProfileInfo: React.FC = () => {
       });
     }
   };
+
+  // Ensure we get the latest data when component mounts
+  useEffect(() => {
+    refreshUserData();
+  }, [refreshUserData]);
 
   return (
     <div className="glass rounded-2xl p-8 animate-fade-in">

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { format } from 'date-fns';
 import Header from '../components/Header';
 import OrderTable from '../components/OrderTable';
@@ -7,7 +7,13 @@ import { useOrders } from '../context/OrderContext';
 import { Calendar, Download } from 'lucide-react';
 
 const OrderHistory = () => {
-  const { getCompletedOrders } = useOrders();
+  const { getCompletedOrders, refreshUserData } = useOrders();
+  
+  // Refresh data when component mounts
+  useEffect(() => {
+    refreshUserData();
+  }, [refreshUserData]);
+  
   const completedOrders = getCompletedOrders();
   
   const exportOrders = () => {

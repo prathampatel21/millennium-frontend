@@ -1,12 +1,17 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Header from '../components/Header';
 import OrderTable from '../components/OrderTable';
 import { useOrders } from '../context/OrderContext';
 import { Layers, ClipboardCheck, Clock } from 'lucide-react';
 
 const OrderStatus = () => {
-  const { orders } = useOrders();
+  const { orders, refreshUserData } = useOrders();
+  
+  // Refresh data when component mounts
+  useEffect(() => {
+    refreshUserData();
+  }, [refreshUserData]);
   
   const processingOrders = orders.filter(order => order.status === 'Processing');
   const inProgressOrders = orders.filter(order => order.status === 'In-Progress');

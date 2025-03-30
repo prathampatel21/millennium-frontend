@@ -1,13 +1,18 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Header from '../components/Header';
 import ProfileInfo from '../components/ProfileInfo';
 import OrderTable from '../components/OrderTable';
 import { useOrders } from '../context/OrderContext';
 
 const Profile = () => {
-  const { getCompletedOrders } = useOrders();
+  const { getCompletedOrders, refreshUserData } = useOrders();
   const completedOrders = getCompletedOrders();
+
+  // Ensure we get the latest data when component mounts
+  useEffect(() => {
+    refreshUserData();
+  }, [refreshUserData]);
 
   return (
     <div className="min-h-screen bg-gray-50">

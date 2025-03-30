@@ -1,20 +1,64 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { format } from 'date-fns';
 import Header from '../components/Header';
 import OrderTable from '../components/OrderTable';
 import { useOrders } from '../context/OrderContext';
+import { useAuth } from '../context/AuthContext';
 import { Calendar, Download } from 'lucide-react';
+import { toast } from 'sonner';
+import { Order } from '../context/OrderContext';
+
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 const OrderHistory = () => {
-  const { getCompletedOrders, refreshUserData } = useOrders();
+  const { refreshUserData } = useOrders();
+  const { getUsername } = useAuth();
+  const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  // Refresh data when component mounts
+  // Fetch order history data when component mounts
   useEffect(() => {
+    const fetchOrderHistory = async () => {
+      try {
+        const username = getUsername();
+        if (!username) {
+          toast.error('User information not available');
+          setLoading(false);
+          return;
+        }
+        
+        console.log('Fetching order history for user:', username);
+        const response = await axios.get(`${API_BASE_URL}/users/${username}/orders/history`);
+        
+        if (response.data && Array.isArray(response.data.orders)) {
+          console.log('Retrieved user order history:', response.data.orders);
+          
+          const mappedOrders = response.data.orders.map((order: any) => ({
+            id: order.order_id?.toString() || '',
+            ticker: order.ticker || '',
+            type: (order.order_type === 'buy' ? 'Buy' : 'Sell'),
+            executionType: 'Market',
+            price: parseFloat(order.price) || 0,
+            size: parseInt(order.shares) || 0,
+            status: 'Completed', // Order history only shows completed orders
+            timestamp: new Date(order.created_at || Date.now()),
+          }));
+          
+          setCompletedOrders(mappedOrders);
+        }
+      } catch (error) {
+        console.error('Error fetching order history:', error);
+        toast.error('Failed to load order history data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchOrderHistory();
     refreshUserData();
-  }, [refreshUserData]);
-  
-  const completedOrders = getCompletedOrders();
+  }, [getUsername, refreshUserData]);
   
   const exportOrders = () => {
     // Mock export functionality
@@ -29,6 +73,19 @@ const OrderHistory = () => {
     document.body.appendChild(element);
     element.click();
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="pt-20 pb-16">
+          <div className="container mx-auto px-4 md:px-6 py-8 md:py-12 flex justify-center items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

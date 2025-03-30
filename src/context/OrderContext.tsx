@@ -109,7 +109,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         console.log('Retrieved user order history:', orderHistoryResponse.data.orders);
         
         const mappedOrders = orderHistoryResponse.data.orders.map((order: any) => ({
-          id: order.order_id.toString(),
+          id: order.parent_order_id.toString(),
           ticker: order.ticker || '',
           type: (order.order_type === 'buy' ? 'Buy' : 'Sell') as OrderType,
           executionType: 'Market' as OrderExecutionType,

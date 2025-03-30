@@ -1,5 +1,4 @@
-
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
 import { useAuth } from './AuthContext';
@@ -56,7 +55,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [holdings, setHoldings] = useState<StockHolding[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refreshUserData = async () => {
+  const refreshUserData = useCallback(async () => {
     if (!user) {
       setLoading(false);
       return;
@@ -115,17 +114,17 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       
     } catch (error) {
       console.error('Error fetching user data in OrderContext:', error);
-      toast.error('Failed to load order data', {
+      toast.error('Failed to load user data', {
         description: 'Please try refreshing the page',
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, getUsername]);
 
   useEffect(() => {
     refreshUserData();
-  }, [user, getUsername]);
+  }, [refreshUserData]);
 
   const validateOrder = (newOrder: Omit<Order, 'id' | 'timestamp' | 'status'>): boolean => {
     const totalCost = newOrder.price * newOrder.size;

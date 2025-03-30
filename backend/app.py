@@ -33,7 +33,7 @@ def convert_decimal_to_float(data):
 def create_user():
     data = request.json
     username = data.get('username')
-    initial_balance = data.get('initial_balance', 0)
+    initial_balance = data.get('initial_balance', 20)  # Default to 20 if not specified
     
     if not username:
         return jsonify({"error": "Username is required"}), 400
@@ -280,4 +280,3 @@ def get_user_order_history(username):
 
 if __name__ == '__main__':
     app.run(debug=True)
-

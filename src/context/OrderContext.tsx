@@ -67,9 +67,16 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       console.log('Fetching balance for user:', username);
       const balanceResponse = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
       
-      if (balanceResponse.data && typeof balanceResponse.data.balance === 'number') {
-        console.log('Retrieved user balance:', balanceResponse.data.balance);
-        setBalanceState(balanceResponse.data.balance);
+      if (balanceResponse.data) {
+        // Convert the balance to a number regardless of whether it's a string or number
+        const balanceValue = parseFloat(balanceResponse.data.balance);
+        
+        if (!isNaN(balanceValue)) {
+          console.log('Retrieved user balance:', balanceValue);
+          setBalanceState(balanceValue);
+        } else {
+          console.error('Invalid balance value received:', balanceResponse.data.balance);
+        }
       }
     } catch (error) {
       console.error('Error fetching user balance:', error);

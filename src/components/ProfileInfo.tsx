@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, Mail, LogOut, DollarSign, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
@@ -49,17 +50,24 @@ const ProfileInfo: React.FC = () => {
           balance: newBalance
         });
         
-        if (response.data && response.data.new_balance) {
-          // Update balance through OrderContext
-          await setBalance(response.data.new_balance);
+        if (response.data) {
+          // Convert the new_balance to a number regardless of whether it's a string or number
+          const updatedBalance = parseFloat(response.data.new_balance);
           
-          toast.success('Account balance updated', {
-            description: `New balance: $${response.data.new_balance.toFixed(2)}`,
-          });
-          
-          // Refresh user data to ensure all data is in sync
-          await refreshUserData();
-          setIsEditingBalance(false);
+          if (!isNaN(updatedBalance)) {
+            // Update balance through OrderContext
+            await setBalance(updatedBalance);
+            
+            toast.success('Account balance updated', {
+              description: `New balance: $${updatedBalance.toFixed(2)}`,
+            });
+            
+            // Refresh user data to ensure all data is in sync
+            await refreshUserData();
+            setIsEditingBalance(false);
+          } else {
+            throw new Error('Invalid balance value received from server');
+          }
         }
       } catch (error) {
         console.error('Error updating balance:', error);

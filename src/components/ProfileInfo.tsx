@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, Mail, LogOut, CheckCircle, DollarSign, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,6 +15,7 @@ const ProfileInfo: React.FC = () => {
   const [balanceInput, setBalanceInput] = useState(balance.toString());
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Update balance input when the actual balance changes
   useEffect(() => {
@@ -42,29 +42,13 @@ const ProfileInfo: React.FC = () => {
         
         setLoading(false);
       } catch (error) {
-        // If user doesn't exist in MySQL yet, create them
-        try {
-          const username = getUsername();
-          if (!username) return;
-          
-          // Create user in MySQL with default balance
-          await axios.post(`${API_BASE_URL}/users`, {
-            username: username,
-            initial_balance: balance
-          });
-          
-          toast.success('User profile created in database');
-          setLoading(false);
-        } catch (createError) {
-          console.error('Error creating user:', createError);
-          toast.error('Failed to create user profile');
-          setLoading(false);
-        }
+        console.error('Error fetching user data:', error);
+        setLoading(false);
       }
     };
 
     fetchUserData();
-  }, [user, getUsername, setBalance, balance]);
+  }, [user, getUsername, setBalance]);
 
   const handleLogout = async () => {
     await signOut();
@@ -80,7 +64,7 @@ const ProfileInfo: React.FC = () => {
           throw new Error('Username not available');
         }
         
-        // Update balance in backend
+        // Update balance in MySQL backend
         await axios.put(`${API_BASE_URL}/users/${username}/balance`, {
           balance: newBalance
         });
@@ -104,8 +88,6 @@ const ProfileInfo: React.FC = () => {
       });
     }
   };
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (loading) {
     return (

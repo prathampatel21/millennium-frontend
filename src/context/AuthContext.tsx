@@ -3,6 +3,10 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import axios from 'axios';
+
+// Define API base URL
+const API_BASE_URL = 'http://localhost:5000';
 
 type AuthContextType = {
   user: User | null;
@@ -21,6 +25,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Create or sync user with MySQL database
+  const syncUserWithMySQL = async (email: string) => {
+    try {
+      // Try to create user in MySQL with default balance
+      await axios.post(`${API_BASE_URL}/users`, {
+        username: email,
+        initial_balance: 10000 // Default balance
+      });
+      console.log('User synced with MySQL database');
+    } catch (error: any) {
+      console.error('Error syncing user with MySQL:', error);
+      // If error contains "Duplicate entry", user already exists which is fine
+      if (!error.response?.data?.error?.includes('Duplicate entry')) {
+        toast.error('Warning: Failed to sync with trading database', {
+          description: 'Some features may be limited',
+        });
+      }
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -28,6 +52,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
+
+        // If user just signed in, sync with MySQL
+        if (event === 'SIGNED_IN' && session?.user) {
+          syncUserWithMySQL(session.user.email || '');
+        }
       }
     );
 
@@ -36,6 +65,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
+      
+      // If user is already signed in, ensure they exist in MySQL
+      if (session?.user) {
+        syncUserWithMySQL(session.user.email || '');
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -71,6 +105,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) throw error;
+      
+      // User will be synced with MySQL when they sign in after confirming email
       toast.success('Account created successfully', {
         description: 'Please check your email for verification instructions',
       });

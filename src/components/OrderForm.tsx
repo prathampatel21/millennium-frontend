@@ -50,7 +50,6 @@ const OrderForm: React.FC = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     
-    // Clear error when user types
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -65,10 +64,8 @@ const OrderForm: React.FC = () => {
     
     if (!validateForm()) return;
     
-    // For market orders, use a simulated current market price
     let orderPrice = Number(formData.price);
     if (formData.executionType === 'Market') {
-      // Simulate a market price based on ticker (in a real app, this would come from an API)
       const marketPrices: Record<string, number> = {
         'AAPL': 174.79,
         'MSFT': 416.38,
@@ -80,54 +77,35 @@ const OrderForm: React.FC = () => {
       };
       
       const ticker = formData.ticker.toUpperCase();
-      orderPrice = marketPrices[ticker] || (100 + Math.random() * 200); // Random price for unknown tickers
+      orderPrice = marketPrices[ticker] || (100 + Math.random() * 200);
     }
     
     setIsSubmitting(true);
     
     try {
-      // Get username from auth context
       const username = getUsername();
       if (!username) {
         throw new Error('User not authenticated');
       }
       
-      // Calculate the total amount of the order
       const amount = orderPrice * Number(formData.size);
       
-      // Create a parent order
       const orderResponse = await axios.post(`${API_BASE_URL}/orders/parent`, {
         ticker: formData.ticker.toUpperCase(),
         shares: Number(formData.size),
-        type: formData.type.toLowerCase(), // API expects 'buy' or 'sell' (lowercase)
+        type: formData.type.toLowerCase(),
         amount: amount,
         username: username
       });
       
       const parentOrderId = orderResponse.data.order_id;
+      console.log('Created parent order with ID:', parentOrderId);
       
-      // Create a child order for this parent order
-      const childOrderResponse = await axios.post(`${API_BASE_URL}/orders/child`, {
-        parent_order_id: parentOrderId,
-        price: orderPrice,
-        shares: Number(formData.size)
-      });
-      
-      // For demo purposes, we'll complete the child order immediately
-      // In a real trading system, this would happen when a match is found
-      await axios.put(`${API_BASE_URL}/orders/child/${childOrderResponse.data.child_order_id}/complete`);
-      
-      // Complete the parent order as well
-      await axios.put(`${API_BASE_URL}/orders/parent/${parentOrderId}/complete`);
-      
-      // Get updated user balance
       const portfolioResponse = await axios.get(`${API_BASE_URL}/users/${username}/portfolio`);
       const updatedBalance = portfolioResponse.data.user_summary.balance;
       
-      // Update local balance state
       setBalance(updatedBalance);
       
-      // Still use the local order tracking for UI updates
       const orderSuccess = addOrder({
         ticker: formData.ticker.toUpperCase(),
         type: formData.type as 'Buy' | 'Sell',
@@ -142,7 +120,6 @@ const OrderForm: React.FC = () => {
           icon: <CheckCircle className="h-4 w-4" />,
         });
         
-        // Reset form
         setFormData({
           ticker: '',
           type: 'Buy',
@@ -151,7 +128,6 @@ const OrderForm: React.FC = () => {
           size: '',
         });
         
-        // Navigate to orders page after short delay
         setTimeout(() => {
           navigate('/orders');
         }, 1500);
@@ -161,7 +137,6 @@ const OrderForm: React.FC = () => {
       let errorMessage = 'Please try again later';
       
       if (axios.isAxiosError(error) && error.response) {
-        // Extract error message from API response
         errorMessage = error.response.data.error || errorMessage;
       }
       

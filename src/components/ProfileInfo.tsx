@@ -32,17 +32,31 @@ const ProfileInfo: React.FC = () => {
         const username = getUsername();
         if (!username) return;
         
-        // Try to fetch the user's portfolio from backend
-        const response = await axios.get(`${API_BASE_URL}/users/${username}/portfolio`);
+        console.log('Fetching user balance for:', username);
         
-        // Update balance from backend data
-        if (response.data.user_summary) {
-          setBalance(response.data.user_summary.balance);
+        // Fetch the user's balance from the MySQL database
+        const balanceResponse = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
+        
+        if (balanceResponse.data && typeof balanceResponse.data.balance === 'number') {
+          console.log('Retrieved user balance:', balanceResponse.data.balance);
+          setBalance(balanceResponse.data.balance);
+        }
+        
+        // Try to fetch the user's portfolio from backend
+        const portfolioResponse = await axios.get(`${API_BASE_URL}/users/${username}/portfolio`);
+        
+        // Update balance from portfolio data if not already set
+        if (portfolioResponse.data?.user_summary && typeof portfolioResponse.data.user_summary.balance === 'number') {
+          console.log('Retrieved user portfolio with balance:', portfolioResponse.data.user_summary.balance);
+          setBalance(portfolioResponse.data.user_summary.balance);
         }
         
         setLoading(false);
       } catch (error) {
         console.error('Error fetching user data:', error);
+        toast.error('Failed to load user data', {
+          description: 'Please try refreshing the page',
+        });
         setLoading(false);
       }
     };
@@ -65,15 +79,17 @@ const ProfileInfo: React.FC = () => {
         }
         
         // Update balance in MySQL backend
-        await axios.put(`${API_BASE_URL}/users/${username}/balance`, {
+        const response = await axios.put(`${API_BASE_URL}/users/${username}/balance`, {
           balance: newBalance
         });
         
-        setBalance(newBalance);
-        setIsEditingBalance(false);
-        toast.success('Account balance updated', {
-          description: `New balance: $${newBalance.toFixed(2)}`,
-        });
+        if (response.data && response.data.new_balance) {
+          setBalance(response.data.new_balance);
+          setIsEditingBalance(false);
+          toast.success('Account balance updated', {
+            description: `New balance: $${newBalance.toFixed(2)}`,
+          });
+        }
       } catch (error) {
         console.error('Error updating balance:', error);
         toast.error('Failed to update balance', {

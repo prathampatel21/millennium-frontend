@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -52,13 +51,16 @@ const Auth = () => {
     try {
       if (isSignUp) {
         await signUp(formData.email, formData.password, formData.username);
-        // Don't redirect, show message to check email instead
+        // After successful signup, sign in automatically
+        await signIn(formData.email, formData.password);
+        navigate('/profile');
       } else {
         await signIn(formData.email, formData.password);
         navigate('/profile');
       }
     } catch (error) {
       // Errors are handled in the auth functions
+      console.error('Authentication error:', error);
     } finally {
       setIsSubmitting(false);
     }

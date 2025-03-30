@@ -25,23 +25,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Create or sync user with MySQL database
-  const syncUserWithMySQL = async (email: string) => {
+  // Create user in MySQL database
+  const createUserInMySQL = async (email: string) => {
     try {
-      // Try to create user in MySQL with default balance
-      await axios.post(`${API_BASE_URL}/users`, {
+      // Create user in MySQL with default balance of 10000
+      const response = await axios.post(`${API_BASE_URL}/users`, {
         username: email,
         initial_balance: 10000 // Default balance
       });
-      console.log('User synced with MySQL database');
+      console.log('User created in MySQL database:', response.data);
+      return response.data;
     } catch (error: any) {
-      console.error('Error syncing user with MySQL:', error);
+      console.error('Error creating user in MySQL:', error);
       // If error contains "Duplicate entry", user already exists which is fine
-      if (!error.response?.data?.error?.includes('Duplicate entry')) {
-        toast.error('Warning: Failed to sync with trading database', {
-          description: 'Some features may be limited',
-        });
+      if (error.response?.data?.error?.includes('Duplicate entry')) {
+        console.log('User already exists in MySQL database');
+        return null;
       }
+      throw error;
+    }
+  };
+
+  // Check if user exists in MySQL database
+  const checkUserInMySQL = async (email: string) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/users/${email}/balance`);
+      console.log('User found in MySQL database:', response.data);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        console.log('User not found in MySQL database, creating new user');
+        return await createUserInMySQL(email);
+      }
+      console.error('Error checking user in MySQL:', error);
+      throw error;
     }
   };
 
@@ -53,9 +70,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         setIsLoading(false);
 
-        // If user just signed in, sync with MySQL
+        // If user just signed in, check if they exist in MySQL
         if (event === 'SIGNED_IN' && session?.user) {
-          syncUserWithMySQL(session.user.email || '');
+          setTimeout(async () => {
+            try {
+              await checkUserInMySQL(session.user.email || '');
+            } catch (error) {
+              console.error('Error checking/creating user in MySQL:', error);
+              toast.error('Error connecting to trading database', {
+                description: 'Some features may be limited',
+              });
+            }
+          }, 0);
         }
       }
     );
@@ -68,7 +94,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // If user is already signed in, ensure they exist in MySQL
       if (session?.user) {
-        syncUserWithMySQL(session.user.email || '');
+        setTimeout(async () => {
+          try {
+            await checkUserInMySQL(session.user.email || '');
+          } catch (error) {
+            console.error('Error checking/creating user in MySQL:', error);
+            toast.error('Error connecting to trading database', {
+              description: 'Some features may be limited',
+            });
+          }
+        }, 0);
       }
     });
 
@@ -83,6 +118,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) throw error;
+      
+      // Check if user exists in MySQL when signing in
+      await checkUserInMySQL(email);
       toast.success('Signed in successfully');
     } catch (error: any) {
       toast.error('Error signing in', {
@@ -106,9 +144,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (error) throw error;
       
-      // User will be synced with MySQL when they sign in after confirming email
+      // Create user in MySQL database when they sign up
+      await createUserInMySQL(email);
+      
       toast.success('Account created successfully', {
-        description: 'Please check your email for verification instructions',
+        description: 'Your account has been created and synchronized with the trading system',
       });
     } catch (error: any) {
       toast.error('Error creating account', {

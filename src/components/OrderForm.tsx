@@ -1,7 +1,7 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
+import { useAuth } from '../context/AuthContext';
 import { ArrowRight, AlertCircle, CheckCircle, DollarSign, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -12,6 +12,7 @@ const API_BASE_URL = 'http://localhost:5000';
 const OrderForm: React.FC = () => {
   const navigate = useNavigate();
   const { addOrder, balance, setBalance } = useOrders();
+  const { getUsername } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     ticker: '',
@@ -85,18 +86,10 @@ const OrderForm: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      // First, create a user if not exists (for demo purposes)
-      // In a real app, you'd have user authentication and would know the user ID
-      let userId = localStorage.getItem('userId');
-      
-      if (!userId) {
-        // Create a new user with initial balance
-        const userResponse = await axios.post(`${API_BASE_URL}/users`, {
-          initial_balance: 10000 // Default initial balance
-        });
-        
-        userId = userResponse.data.user_id.toString();
-        localStorage.setItem('userId', userId);
+      // Get username from auth context
+      const username = getUsername();
+      if (!username) {
+        throw new Error('User not authenticated');
       }
       
       // Calculate the total amount of the order
@@ -108,7 +101,7 @@ const OrderForm: React.FC = () => {
         shares: Number(formData.size),
         type: formData.type.toLowerCase(), // API expects 'buy' or 'sell' (lowercase)
         amount: amount,
-        user_id: Number(userId)
+        username: username
       });
       
       const parentOrderId = orderResponse.data.order_id;
@@ -117,8 +110,7 @@ const OrderForm: React.FC = () => {
       const childOrderResponse = await axios.post(`${API_BASE_URL}/orders/child`, {
         parent_order_id: parentOrderId,
         price: orderPrice,
-        shares: Number(formData.size),
-        amount: amount
+        shares: Number(formData.size)
       });
       
       // For demo purposes, we'll complete the child order immediately
@@ -129,7 +121,7 @@ const OrderForm: React.FC = () => {
       await axios.put(`${API_BASE_URL}/orders/parent/${parentOrderId}/complete`);
       
       // Get updated user balance
-      const portfolioResponse = await axios.get(`${API_BASE_URL}/users/${userId}/portfolio`);
+      const portfolioResponse = await axios.get(`${API_BASE_URL}/users/${username}/portfolio`);
       const updatedBalance = portfolioResponse.data.user_summary.balance;
       
       // Update local balance state

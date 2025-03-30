@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { Menu, X, ChevronRight, BarChart, PlusCircle, User, ClipboardList } from 'lucide-react';
+import { NavLink, useLocation, Link } from 'react-router-dom';
+import { Menu, X, ChevronRight, BarChart, PlusCircle, User, ClipboardList, LogIn } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   const handleScroll = () => {
     const offset = window.scrollY;
@@ -41,18 +43,34 @@ const Header: React.FC = () => {
         return 'Order History';
       case '/profile':
         return 'Profile';
+      case '/auth':
+        return 'Authentication';
       default:
         return 'TradeFlow';
     }
   };
 
-  const navLinks = [
-    { name: 'Dashboard', path: '/', icon: BarChart },
-    { name: 'Create Order', path: '/create-order', icon: PlusCircle },
-    { name: 'Order Status', path: '/orders', icon: ClipboardList },
-    { name: 'Order History', path: '/history', icon: ClipboardList },
-    { name: 'Profile', path: '/profile', icon: User },
-  ];
+  // Nav links change based on authentication status
+  const getNavLinks = () => {
+    const commonLinks = [
+      { name: 'Dashboard', path: '/', icon: BarChart },
+    ];
+    
+    const authLinks = [
+      { name: 'Create Order', path: '/create-order', icon: PlusCircle },
+      { name: 'Order Status', path: '/orders', icon: ClipboardList },
+      { name: 'Order History', path: '/history', icon: ClipboardList },
+      { name: 'Profile', path: '/profile', icon: User },
+    ];
+    
+    const guestLinks = [
+      { name: 'Login / Register', path: '/auth', icon: LogIn },
+    ];
+    
+    return user ? [...commonLinks, ...authLinks] : [...commonLinks, ...guestLinks];
+  };
+
+  const navLinks = getNavLinks();
 
   return (
     <header 
@@ -63,7 +81,7 @@ const Header: React.FC = () => {
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex items-center justify-between h-16 md:h-20">
           <div className="flex items-center space-x-2">
-            <span className="text-lg font-bold text-primary">TradeFlow</span>
+            <Link to="/" className="text-lg font-bold text-primary">TradeFlow</Link>
           </div>
           
           <div className="md:hidden flex items-center">
@@ -98,6 +116,16 @@ const Header: React.FC = () => {
                 {link.name}
               </NavLink>
             ))}
+            
+            {user && (
+              <button
+                onClick={() => signOut()}
+                className="flex items-center px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium hover:bg-gray-100 text-gray-700"
+              >
+                <LogIn className="w-4 h-4 mr-2 rotate-180" />
+                Sign Out
+              </button>
+            )}
           </nav>
         </div>
       </div>
@@ -132,6 +160,19 @@ const Header: React.FC = () => {
                 <ChevronRight className="w-4 h-4 text-gray-400" />
               </NavLink>
             ))}
+            
+            {user && (
+              <button
+                onClick={() => signOut()}
+                className="flex items-center justify-between w-full px-3 py-3 rounded-lg text-gray-700"
+              >
+                <div className="flex items-center">
+                  <LogIn className="w-5 h-5 mr-3 rotate-180" />
+                  Sign Out
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </button>
+            )}
           </div>
         </div>
       </div>

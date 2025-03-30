@@ -1,50 +1,103 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, Mail, LogOut, CheckCircle, DollarSign, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOrders } from '../context/OrderContext';
+import { useAuth } from '../context/AuthContext';
 import { Input } from '@/components/ui/input';
+import axios from 'axios';
 
-// Mock user data
-const mockUser = {
-  name: 'John Doe',
-  email: 'john.doe@example.com',
-  joinedDate: new Date(2023, 5, 15),
-  profileImage: null,
-};
+// Define API base URL
+const API_BASE_URL = 'http://localhost:5000';
 
 const ProfileInfo: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const { user, getUsername, signOut } = useAuth();
   const { balance, setBalance, holdings } = useOrders();
   const [balanceInput, setBalanceInput] = useState(balance.toString());
   const [isEditingBalance, setIsEditingBalance] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Update balance input when the actual balance changes
   useEffect(() => {
     setBalanceInput(balance.toFixed(2));
   }, [balance]);
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    toast.success('Logged out successfully', {
-      icon: <CheckCircle className="h-4 w-4" />,
-    });
+  // Fetch user data from backend when component mounts
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user) return;
+      
+      try {
+        // Get the username from auth context
+        const username = getUsername();
+        if (!username) return;
+        
+        // Try to fetch the user's portfolio from backend
+        const response = await axios.get(`${API_BASE_URL}/users/${username}/portfolio`);
+        
+        // Update balance from backend data
+        if (response.data.user_summary) {
+          setBalance(response.data.user_summary.balance);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        // If user doesn't exist in MySQL yet, create them
+        try {
+          const username = getUsername();
+          if (!username) return;
+          
+          // Create user in MySQL with default balance
+          await axios.post(`${API_BASE_URL}/users`, {
+            username: username,
+            initial_balance: balance
+          });
+          
+          toast.success('User profile created in database');
+          setLoading(false);
+        } catch (createError) {
+          console.error('Error creating user:', createError);
+          toast.error('Failed to create user profile');
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchUserData();
+  }, [user, getUsername, setBalance, balance]);
+
+  const handleLogout = async () => {
+    await signOut();
   };
 
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-    toast.success('Logged in successfully', {
-      icon: <CheckCircle className="h-4 w-4" />,
-    });
-  };
-
-  const handleBalanceSubmit = () => {
+  const handleBalanceSubmit = async () => {
     const newBalance = parseFloat(balanceInput);
     if (!isNaN(newBalance) && newBalance >= 0) {
-      setBalance(newBalance);
-      setIsEditingBalance(false);
-      toast.success('Account balance updated', {
-        description: `New balance: $${newBalance.toFixed(2)}`,
-      });
+      setIsSubmitting(true);
+      try {
+        const username = getUsername();
+        if (!username) {
+          throw new Error('Username not available');
+        }
+        
+        // Update balance in backend
+        await axios.put(`${API_BASE_URL}/users/${username}/balance`, {
+          balance: newBalance
+        });
+        
+        setBalance(newBalance);
+        setIsEditingBalance(false);
+        toast.success('Account balance updated', {
+          description: `New balance: $${newBalance.toFixed(2)}`,
+        });
+      } catch (error) {
+        console.error('Error updating balance:', error);
+        toast.error('Failed to update balance', {
+          description: 'Please try again later',
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       toast.error('Invalid balance', {
         description: 'Please enter a valid positive number',
@@ -52,50 +105,12 @@ const ProfileInfo: React.FC = () => {
     }
   };
 
-  if (!isLoggedIn) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (loading) {
     return (
-      <div className="w-full max-w-md mx-auto glass rounded-2xl p-8 animate-fade-in">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Login</h2>
-          <p className="text-gray-600 text-sm mt-2">Sign in to manage your orders</p>
-        </div>
-        
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              className="form-input"
-              placeholder="your@email.com"
-              defaultValue="john.doe@example.com"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              className="form-input"
-              placeholder="••••••••"
-              defaultValue="password"
-            />
-          </div>
-          
-          <div className="pt-2">
-            <button
-              onClick={handleLogin}
-              className="btn-primary w-full"
-            >
-              Login
-            </button>
-          </div>
-        </div>
+      <div className="glass rounded-2xl p-8 animate-fade-in flex justify-center items-center" style={{ minHeight: '300px' }}>
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -106,10 +121,10 @@ const ProfileInfo: React.FC = () => {
         <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 text-primary rounded-full mb-4">
           <User className="h-8 w-8" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-800">{mockUser.name}</h2>
+        <h2 className="text-2xl font-bold text-gray-800">{getUsername() || 'User'}</h2>
         <p className="text-gray-500 flex items-center justify-center mt-1">
           <Mail className="h-4 w-4 mr-1" />
-          {mockUser.email}
+          {user?.email}
         </p>
       </div>
       
@@ -130,13 +145,22 @@ const ProfileInfo: React.FC = () => {
                     className="pl-8"
                     min="0"
                     step="0.01"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <button
                   onClick={handleBalanceSubmit}
                   className="px-3 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 transition-colors"
+                  disabled={isSubmitting}
                 >
-                  Save
+                  {isSubmitting ? (
+                    <span className="flex items-center">
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                      Saving
+                    </span>
+                  ) : (
+                    'Save'
+                  )}
                 </button>
                 <button
                   onClick={() => {
@@ -144,6 +168,7 @@ const ProfileInfo: React.FC = () => {
                     setIsEditingBalance(false);
                   }}
                   className="px-3 py-2 bg-gray-200 text-gray-700 rounded-md text-sm hover:bg-gray-300 transition-colors"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </button>
@@ -192,16 +217,16 @@ const ProfileInfo: React.FC = () => {
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-500">Member since</span>
               <span className="text-sm font-medium">
-                {mockUser.joinedDate.toLocaleDateString('en-US', {
+                {user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
-                })}
+                }) : 'Just now'}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-500">User ID</span>
-              <span className="text-sm font-medium">USR-{Math.random().toString(36).substring(2, 10)}</span>
+              <span className="text-sm font-medium">{user?.id ? user.id.substring(0, 8) : 'Unknown'}</span>
             </div>
           </div>
         </div>

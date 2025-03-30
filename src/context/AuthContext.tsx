@@ -26,11 +26,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Create user in MySQL database
-  const createUserInMySQL = async (email: string) => {
+  const createUserInMySQL = async (username: string) => {
     try {
       // Create user in MySQL with default balance of 10000
       const response = await axios.post(`${API_BASE_URL}/users`, {
-        username: email,
+        username: username,
         initial_balance: 10000 // Default balance
       });
       console.log('User created in MySQL database:', response.data);
@@ -47,15 +47,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Check if user exists in MySQL database
-  const checkUserInMySQL = async (email: string) => {
+  const checkUserInMySQL = async (username: string) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/users/${email}/balance`);
+      const response = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
       console.log('User found in MySQL database:', response.data);
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 404) {
         console.log('User not found in MySQL database, creating new user');
-        return await createUserInMySQL(email);
+        return await createUserInMySQL(username);
       }
       console.error('Error checking user in MySQL:', error);
       throw error;
@@ -74,7 +74,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (event === 'SIGNED_IN' && session?.user) {
           setTimeout(async () => {
             try {
-              await checkUserInMySQL(session.user.email || '');
+              const username = session.user.user_metadata.username || session.user.email;
+              await checkUserInMySQL(username);
             } catch (error) {
               console.error('Error checking/creating user in MySQL:', error);
               toast.error('Error connecting to trading database', {
@@ -96,7 +97,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (session?.user) {
         setTimeout(async () => {
           try {
-            await checkUserInMySQL(session.user.email || '');
+            const username = session.user.user_metadata.username || session.user.email;
+            await checkUserInMySQL(username);
           } catch (error) {
             console.error('Error checking/creating user in MySQL:', error);
             toast.error('Error connecting to trading database', {
@@ -112,7 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -120,7 +122,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) throw error;
       
       // Check if user exists in MySQL when signing in
-      await checkUserInMySQL(email);
+      const username = data.user?.user_metadata.username || email;
+      await checkUserInMySQL(username);
       toast.success('Signed in successfully');
     } catch (error: any) {
       toast.error('Error signing in', {
@@ -145,7 +148,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) throw error;
       
       // Create user in MySQL database when they sign up
-      await createUserInMySQL(email);
+      await createUserInMySQL(username);
       
       toast.success('Account created successfully', {
         description: 'Your account has been created and synchronized with the trading system',
@@ -171,7 +174,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const getUsername = () => {
-    return user?.email || null;
+    return user?.user_metadata?.username || user?.email || null;
   };
 
   return (

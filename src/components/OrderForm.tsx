@@ -103,7 +103,7 @@ const OrderForm: React.FC = () => {
       
       const portfolioResponse = await axios.get(`${API_BASE_URL}/users/${username}/portfolio`);
       
-      const orderSuccess = addOrder({
+      const orderSuccess = await addOrder({
         ticker: formData.ticker.toUpperCase(),
         type: formData.type as 'Buy' | 'Sell',
         executionType: formData.executionType as 'Market' | 'Limit',

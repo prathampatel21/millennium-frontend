@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
@@ -98,8 +97,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     },
   ]);
 
-  // Initialize account balance and stock holdings
-  const [balance, setBalance] = useState<number>(10000);
+  const [balance, setBalanceState] = useState<number>(10000);
   const [holdings, setHoldings] = useState<StockHolding[]>([
     { ticker: 'AAPL', quantity: 10 },
     { ticker: 'MSFT', quantity: 3 },
@@ -112,14 +110,12 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const existingHolding = prevHoldings.find(h => h.ticker === ticker);
       
       if (existingHolding) {
-        // Update existing holding
         return prevHoldings.map(h => 
           h.ticker === ticker 
             ? { ...h, quantity: isBuy ? h.quantity + quantity : h.quantity - quantity } 
             : h
-        ).filter(h => h.quantity > 0); // Remove holdings with zero quantity
+        ).filter(h => h.quantity > 0);
       } else if (isBuy) {
-        // Add new holding (only for buys)
         return [...prevHoldings, { ticker, quantity }];
       }
       
@@ -153,7 +149,6 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const addOrder = (newOrder: Omit<Order, 'id' | 'timestamp' | 'status'>): boolean => {
-    // Validate the order first
     if (!validateOrder(newOrder)) {
       return false;
     }
@@ -167,25 +162,21 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     
     setOrders((prevOrders) => [order, ...prevOrders]);
     
-    // Update account balance for 'Buy' orders immediately
     if (order.type === 'Buy') {
-      setBalance(prev => prev - (order.price * order.size));
+      setBalanceState(prev => prev - (order.price * order.size));
     }
     
-    // Simulate order progress after adding
     setTimeout(() => {
       updateOrderStatus(order.id, 'In-Progress');
       
-      // Simulate order completion
       setTimeout(() => {
         updateOrderStatus(order.id, 'Completed');
         
-        // Update holdings and balance only upon completion
         if (order.type === 'Buy') {
           updateHoldings(order.ticker, order.size, true);
         } else if (order.type === 'Sell') {
           updateHoldings(order.ticker, order.size, false);
-          setBalance(prev => prev + (order.price * order.size));
+          setBalanceState(prev => prev + (order.price * order.size));
         }
       }, 8000);
     }, 3000);
@@ -207,6 +198,10 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const getCompletedOrders = () => {
     return orders.filter((order) => order.status === 'Completed');
+  };
+
+  const setBalance = (newBalance: number) => {
+    setBalanceState(newBalance);
   };
 
   return (

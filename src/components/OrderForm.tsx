@@ -4,10 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
 import { ArrowRight, AlertCircle, CheckCircle, DollarSign, Tag } from 'lucide-react';
 import { toast } from 'sonner';
+import axios from 'axios';
+
+// Define the API base URL - adjust this based on where your Flask app is running
+const API_BASE_URL = 'http://localhost:5000';
 
 const OrderForm: React.FC = () => {
   const navigate = useNavigate();
-  const { addOrder, balance } = useOrders();
+  const { addOrder, balance, setBalance } = useOrders();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     ticker: '',
@@ -81,7 +85,57 @@ const OrderForm: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      // Add new order
+      // First, create a user if not exists (for demo purposes)
+      // In a real app, you'd have user authentication and would know the user ID
+      let userId = localStorage.getItem('userId');
+      
+      if (!userId) {
+        // Create a new user with initial balance
+        const userResponse = await axios.post(`${API_BASE_URL}/users`, {
+          initial_balance: 10000 // Default initial balance
+        });
+        
+        userId = userResponse.data.user_id.toString();
+        localStorage.setItem('userId', userId);
+      }
+      
+      // Calculate the total amount of the order
+      const amount = orderPrice * Number(formData.size);
+      
+      // Create a parent order
+      const orderResponse = await axios.post(`${API_BASE_URL}/orders/parent`, {
+        ticker: formData.ticker.toUpperCase(),
+        shares: Number(formData.size),
+        type: formData.type.toLowerCase(), // API expects 'buy' or 'sell' (lowercase)
+        amount: amount,
+        user_id: Number(userId)
+      });
+      
+      const parentOrderId = orderResponse.data.order_id;
+      
+      // Create a child order for this parent order
+      const childOrderResponse = await axios.post(`${API_BASE_URL}/orders/child`, {
+        parent_order_id: parentOrderId,
+        price: orderPrice,
+        shares: Number(formData.size),
+        amount: amount
+      });
+      
+      // For demo purposes, we'll complete the child order immediately
+      // In a real trading system, this would happen when a match is found
+      await axios.put(`${API_BASE_URL}/orders/child/${childOrderResponse.data.child_order_id}/complete`);
+      
+      // Complete the parent order as well
+      await axios.put(`${API_BASE_URL}/orders/parent/${parentOrderId}/complete`);
+      
+      // Get updated user balance
+      const portfolioResponse = await axios.get(`${API_BASE_URL}/users/${userId}/portfolio`);
+      const updatedBalance = portfolioResponse.data.user_summary.balance;
+      
+      // Update local balance state
+      setBalance(updatedBalance);
+      
+      // Still use the local order tracking for UI updates
       const orderSuccess = addOrder({
         ticker: formData.ticker.toUpperCase(),
         type: formData.type as 'Buy' | 'Sell',
@@ -111,8 +165,16 @@ const OrderForm: React.FC = () => {
         }, 1500);
       }
     } catch (error) {
+      console.error('Error submitting order:', error);
+      let errorMessage = 'Please try again later';
+      
+      if (axios.isAxiosError(error) && error.response) {
+        // Extract error message from API response
+        errorMessage = error.response.data.error || errorMessage;
+      }
+      
       toast.error('Failed to submit order', {
-        description: 'Please try again later',
+        description: errorMessage,
         icon: <AlertCircle className="h-4 w-4" />,
       });
     } finally {

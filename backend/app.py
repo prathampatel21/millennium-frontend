@@ -1,4 +1,5 @@
 
+from decimal import Decimal
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mysql.connector
@@ -13,12 +14,22 @@ CORS(app)  # Enable CORS for all routes
 
 # Database connection function
 def get_db_connection():
-    return mysql.connector.connect(
-        host=os.getenv('DB_HOST'),
-        user=os.getenv('DB_USER'),
-        password=os.getenv('DB_PASSWORD'),
-        database=os.getenv('DB_NAME')
+    #print(os.getenv('DB_NAME'))
+    mydb = mysql.connector.connect(
+        host="localhost",
+        user="pranav",
+        passwd="pranav1234",
+        database="trading_db"
     )
+    return mydb
+
+
+def convert_decimal_to_float(data):
+    if isinstance(data, list):
+        return [convert_decimal_to_float(item) for item in data]
+    elif isinstance(data, dict):
+        return {key: float(value) if isinstance(value, Decimal) else value for key, value in data.items()}
+    return data
 
 # User routes
 @app.route('/users', methods=['POST'])
@@ -42,7 +53,7 @@ def create_user():
         cursor.close()
         conn.close()
         
-        return jsonify({"user_id": user_id, "balance": initial_balance}), 201
+        return jsonify({"user_id": user_id, "balance": convert_decimal_to_float(initial_balance)}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -62,7 +73,7 @@ def update_balance(user_id):
         cursor.close()
         conn.close()
         
-        return jsonify({"user_id": user_id, "new_balance": new_balance}), 200
+        return jsonify({"user_id": user_id, "new_balance": convert_decimal_to_float(new_balance)}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -93,8 +104,8 @@ def get_portfolio(user_id):
             return jsonify({"error": "User not found"}), 404
             
         return jsonify({
-            "user_summary": user_summary,
-            "asset_details": asset_details
+            "user_summary": convert_decimal_to_float(user_summary),
+            "asset_details": convert_decimal_to_float(asset_details)
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -137,7 +148,7 @@ def create_parent_order():
             "ticker": ticker,
             "shares": shares,
             "type": order_type,
-            "amount": amount,
+            "amount": convert_decimal_to_float(amount),
             "user_id": user_id
         }), 201
     except Exception as e:
@@ -174,9 +185,9 @@ def create_child_order():
         return jsonify({
             "child_order_id": child_order_id,
             "parent_order_id": parent_order_id,
-            "price": price,
-            "shares": shares,
-            "amount": amount
+            "price": convert_decimal_to_float(price),
+            "shares": convert_decimal_to_float(shares),
+            "amount": convert_decimal_to_float(amount)
         }), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -220,7 +231,7 @@ def get_active_orders():
         cursor.close()
         conn.close()
         
-        return jsonify({"orders": orders}), 200
+        return jsonify({"orders": convert_decimal_to_float(orders)}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -234,7 +245,7 @@ def get_user_order_status(user_id):
         cursor.close()
         conn.close()
         
-        return jsonify({"orders": orders}), 200
+        return jsonify({"orders": convert_decimal_to_float(orders)}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -248,7 +259,7 @@ def get_user_order_history(user_id):
         cursor.close()
         conn.close()
         
-        return jsonify({"orders": orders}), 200
+        return jsonify({"orders": convert_decimal_to_float(orders)}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

@@ -1,4 +1,3 @@
-
 from decimal import Decimal
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -14,7 +13,6 @@ CORS(app)  # Enable CORS for all routes
 
 # Database connection function
 def get_db_connection():
-    #print(os.getenv('DB_NAME'))
     mydb = mysql.connector.connect(
         host="localhost",
         user="pranav",
@@ -22,7 +20,6 @@ def get_db_connection():
         database="trading_db"
     )
     return mydb
-
 
 def convert_decimal_to_float(data):
     if isinstance(data, list):
@@ -35,7 +32,11 @@ def convert_decimal_to_float(data):
 @app.route('/users', methods=['POST'])
 def create_user():
     data = request.json
+    username = data.get('username')
     initial_balance = data.get('initial_balance', 0)
+    
+    if not username:
+        return jsonify({"error": "Username is required"}), 400
     
     if initial_balance < 0:
         return jsonify({"error": "Initial balance cannot be negative"}), 400
@@ -43,22 +44,19 @@ def create_user():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.callproc('create_user', [initial_balance])
+        cursor.callproc('create_user', [username, initial_balance])
         conn.commit()
         
-        # Get the user ID of the newly created user
-        cursor.execute("SELECT LAST_INSERT_ID()")
-        user_id = cursor.fetchone()[0]
-        
+        # For a username-based PK, we just return the provided username
         cursor.close()
         conn.close()
         
-        return jsonify({"user_id": user_id, "balance": convert_decimal_to_float(initial_balance)}), 201
+        return jsonify({"username": username, "balance": convert_decimal_to_float(initial_balance)}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/users/<int:user_id>/balance', methods=['PUT'])
-def update_balance(user_id):
+@app.route('/users/<string:username>/balance', methods=['PUT'])
+def update_balance(username):
     data = request.json
     new_balance = data.get('balance')
     
@@ -68,35 +66,30 @@ def update_balance(user_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.callproc('update_user_balance', [user_id, new_balance])
+        cursor.callproc('update_user_balance', [username, new_balance])
         conn.commit()
         cursor.close()
         conn.close()
         
-        return jsonify({"user_id": user_id, "new_balance": convert_decimal_to_float(new_balance)}), 200
+        return jsonify({"username": username, "new_balance": convert_decimal_to_float(new_balance)}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/users/<int:user_id>/portfolio', methods=['GET'])
-def get_portfolio(user_id):
+@app.route('/users/<string:username>/portfolio', methods=['GET'])
+def get_portfolio(username):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.callproc('get_user_account_info', [user_id])
+        cursor.callproc('get_user_account_info', [username])
         
         # Get user summary from the first result set
         user_summary = None
-        for result in cursor.stored_results():
+        stored_results = cursor.stored_results()
+        for result in stored_results:
             user_summary = result.fetchone()
             break
         
-        # Get asset details from the second result set
-        cursor.callproc('get_user_account_info', [user_id])
-        asset_details = []
-        results = list(cursor.stored_results())
-        if len(results) > 1:
-            asset_details = results[1].fetchall()
-        
+        # Reset cursor and call again to get asset details
         cursor.close()
         conn.close()
         
@@ -104,8 +97,7 @@ def get_portfolio(user_id):
             return jsonify({"error": "User not found"}), 404
             
         return jsonify({
-            "user_summary": convert_decimal_to_float(user_summary),
-            "asset_details": convert_decimal_to_float(asset_details)
+            "user_summary": convert_decimal_to_float(user_summary)
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -118,10 +110,10 @@ def create_parent_order():
     shares = data.get('shares')
     order_type = data.get('type')  # 'buy' or 'sell'
     amount = data.get('amount')
-    user_id = data.get('user_id')
+    username = data.get('username')
     
     # Validate inputs
-    if not all([ticker, shares, order_type, amount, user_id]):
+    if not all([ticker, shares, order_type, amount, username]):
         return jsonify({"error": "Missing required fields"}), 400
     
     if shares <= 0 or amount <= 0:
@@ -133,7 +125,7 @@ def create_parent_order():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.callproc('create_parent_order', [ticker, shares, order_type, amount, user_id])
+        cursor.callproc('create_parent_order', [ticker, shares, order_type, amount, username])
         conn.commit()
         
         # Get the ID of the newly created order
@@ -149,7 +141,7 @@ def create_parent_order():
             "shares": shares,
             "type": order_type,
             "amount": convert_decimal_to_float(amount),
-            "user_id": user_id
+            "username": username
         }), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -160,19 +152,18 @@ def create_child_order():
     parent_order_id = data.get('parent_order_id')
     price = data.get('price')
     shares = data.get('shares')
-    amount = data.get('amount')
     
-    # Validate inputs
-    if not all([parent_order_id, price, shares, amount]):
+    # Validate inputs (note: no amount parameter for child order now)
+    if not all([parent_order_id, price, shares]):
         return jsonify({"error": "Missing required fields"}), 400
     
-    if price <= 0 or shares <= 0 or amount <= 0:
-        return jsonify({"error": "Price, shares, and amount must be positive"}), 400
+    if price <= 0 or shares <= 0:
+        return jsonify({"error": "Price and shares must be positive"}), 400
     
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.callproc('create_child_order', [parent_order_id, price, shares, amount])
+        cursor.callproc('create_child_order', [parent_order_id, price, shares])
         conn.commit()
         
         # Get the ID of the newly created child order
@@ -186,8 +177,7 @@ def create_child_order():
             "child_order_id": child_order_id,
             "parent_order_id": parent_order_id,
             "price": convert_decimal_to_float(price),
-            "shares": convert_decimal_to_float(shares),
-            "amount": convert_decimal_to_float(amount)
+            "shares": convert_decimal_to_float(shares)
         }), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -235,12 +225,13 @@ def get_active_orders():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/users/<int:user_id>/orders/status', methods=['GET'])
-def get_user_order_status(user_id):
+@app.route('/users/<string:username>/orders/status', methods=['GET'])
+def get_user_order_status(username):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM user_order_status WHERE userID = %s", (user_id,))
+        # The view now uses the "username" column instead of a numeric userID
+        cursor.execute("SELECT * FROM user_order_status WHERE username = %s", (username,))
         orders = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -249,12 +240,13 @@ def get_user_order_status(user_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/users/<int:user_id>/orders/history', methods=['GET'])
-def get_user_order_history(user_id):
+@app.route('/users/<string:username>/orders/history', methods=['GET'])
+def get_user_order_history(username):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM user_completed_orders WHERE userID = %s", (user_id,))
+        # The completed orders view now filters by username
+        cursor.execute("SELECT * FROM user_completed_orders WHERE username = %s", (username,))
         orders = cursor.fetchall()
         cursor.close()
         conn.close()

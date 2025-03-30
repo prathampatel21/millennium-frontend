@@ -126,6 +126,20 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     refreshUserData();
   }, [refreshUserData]);
 
+  useEffect(() => {
+    const fetchLatestData = async () => {
+      if (user && !loading) {
+        await refreshUserData();
+      }
+    };
+    
+    const intervalId = setInterval(fetchLatestData, 30000);
+    
+    fetchLatestData();
+    
+    return () => clearInterval(intervalId);
+  }, [user, loading, refreshUserData]);
+
   const validateOrder = (newOrder: Omit<Order, 'id' | 'timestamp' | 'status'>): boolean => {
     const totalCost = newOrder.price * newOrder.size;
     
@@ -208,7 +222,27 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const setBalance = async (newBalance: number) => {
-    setBalanceState(newBalance);
+    const username = getUsername();
+    if (!username) {
+      toast.error('User information not available');
+      return;
+    }
+    
+    try {
+      // Update balance in MySQL database
+      await axios.put(`${API_BASE_URL}/users/${username}/balance`, {
+        balance: newBalance
+      });
+      
+      // Fetch the latest balance from the server to ensure consistency
+      const response = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
+      if (response.data && typeof response.data.balance === 'number') {
+        setBalanceState(response.data.balance);
+      }
+    } catch (error) {
+      console.error('Error updating balance:', error);
+      toast.error('Failed to update balance');
+    }
   };
 
   if (loading && user) {

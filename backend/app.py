@@ -15,8 +15,8 @@ CORS(app)  # Enable CORS for all routes
 def get_db_connection():
     mydb = mysql.connector.connect(
         host="localhost",
-        user="pranav",
-        passwd="pranav1234",
+        user="root",
+        passwd="Pratham2005!@",
         database="trading_db"
     )
     return mydb
@@ -75,6 +75,30 @@ def update_balance(username):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# New route: Get User Balance via stored procedure
+@app.route('/users/<string:username>/balance', methods=['GET'])
+def get_balance(username):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.callproc('get_user_balance', [username])
+        
+        # Get the first result set from the stored procedure
+        result = None
+        for res in cursor.stored_results():
+            result = res.fetchone()
+            break
+        
+        cursor.close()
+        conn.close()
+        
+        if result is None:
+            return jsonify({"error": "User not found"}), 404
+            
+        return jsonify({"username": username, "balance": convert_decimal_to_float(result['account_balance'])}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/users/<string:username>/portfolio', methods=['GET'])
 def get_portfolio(username):
     try:
@@ -89,7 +113,6 @@ def get_portfolio(username):
             user_summary = result.fetchone()
             break
         
-        # Reset cursor and call again to get asset details
         cursor.close()
         conn.close()
         
@@ -257,3 +280,4 @@ def get_user_order_history(username):
 
 if __name__ == '__main__':
     app.run(debug=True)
+

@@ -15,33 +15,20 @@ const ProfileInfo: React.FC = () => {
   const [balanceInput, setBalanceInput] = useState(balance.toString());
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [displayBalance, setDisplayBalance] = useState<number>(0);
-
-  // Fetch latest balance directly from the API on component mount
-  useEffect(() => {
-    const fetchBalance = async () => {
-      try {
-        const username = getUsername();
-        if (!username) return;
-        
-        const response = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
-        if (response.data && typeof response.data.balance === 'number') {
-          setDisplayBalance(response.data.balance);
-          setBalanceInput(response.data.balance.toFixed(2));
-        }
-      } catch (error) {
-        console.error('Error fetching balance:', error);
-      }
-    };
-
-    fetchBalance();
-  }, [getUsername]);
 
   // Update balance input when the actual balance changes
   useEffect(() => {
     setBalanceInput(balance.toFixed(2));
-    setDisplayBalance(balance);
   }, [balance]);
+
+  // Fetch the latest data when component mounts
+  useEffect(() => {
+    const fetchLatestData = async () => {
+      await refreshUserData();
+    };
+    
+    fetchLatestData();
+  }, [refreshUserData]);
 
   const handleLogout = async () => {
     await signOut();
@@ -63,8 +50,9 @@ const ProfileInfo: React.FC = () => {
         });
         
         if (response.data && response.data.new_balance) {
-          setBalance(response.data.new_balance);
-          setDisplayBalance(response.data.new_balance);
+          // Update balance through OrderContext
+          await setBalance(response.data.new_balance);
+          
           toast.success('Account balance updated', {
             description: `New balance: $${response.data.new_balance.toFixed(2)}`,
           });
@@ -87,11 +75,6 @@ const ProfileInfo: React.FC = () => {
       });
     }
   };
-
-  // Ensure we get the latest data when component mounts
-  useEffect(() => {
-    refreshUserData();
-  }, [refreshUserData]);
 
   return (
     <div className="glass rounded-2xl p-8 animate-fade-in">
@@ -142,7 +125,7 @@ const ProfileInfo: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    setBalanceInput(displayBalance.toFixed(2));
+                    setBalanceInput(balance.toFixed(2));
                     setIsEditingBalance(false);
                   }}
                   className="px-3 py-2 bg-gray-200 text-gray-700 rounded-md text-sm hover:bg-gray-300 transition-colors"
@@ -155,7 +138,7 @@ const ProfileInfo: React.FC = () => {
               <div className="flex justify-between items-center">
                 <div className="flex items-center">
                   <DollarSign className="h-5 w-5 text-primary mr-2" />
-                  <span className="text-lg font-semibold">${displayBalance.toFixed(2)}</span>
+                  <span className="text-lg font-semibold">${balance.toFixed(2)}</span>
                 </div>
                 <button
                   onClick={() => setIsEditingBalance(true)}

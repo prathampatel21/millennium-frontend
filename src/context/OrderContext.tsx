@@ -1,6 +1,10 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
+import { useAuth } from './AuthContext';
+import axios from 'axios';
+
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 export type OrderType = 'Buy' | 'Sell';
 export type OrderStatus = 'Processing' | 'In-Progress' | 'Completed';
@@ -44,66 +48,79 @@ export const useOrders = () => {
 };
 
 export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: '1',
-      ticker: 'AAPL',
-      type: 'Buy',
-      executionType: 'Market',
-      price: 174.79,
-      size: 10,
-      status: 'Completed',
-      timestamp: new Date(Date.now() - 86400000 * 3), // 3 days ago
-    },
-    {
-      id: '2',
-      ticker: 'AMZN',
-      type: 'Sell',
-      executionType: 'Limit',
-      price: 178.25,
-      size: 5,
-      status: 'In-Progress',
-      timestamp: new Date(Date.now() - 3600000), // 1 hour ago
-    },
-    {
-      id: '3',
-      ticker: 'MSFT',
-      type: 'Buy',
-      executionType: 'Market',
-      price: 416.38,
-      size: 3,
-      status: 'Processing',
-      timestamp: new Date(), // Now
-    },
-    {
-      id: '4',
-      ticker: 'NVDA',
-      type: 'Buy',
-      executionType: 'Market',
-      price: 950.02,
-      size: 2,
-      status: 'Completed',
-      timestamp: new Date(Date.now() - 86400000), // 1 day ago
-    },
-    {
-      id: '5',
-      ticker: 'TSLA',
-      type: 'Sell',
-      executionType: 'Limit',
-      price: 177.56,
-      size: 15,
-      status: 'Completed',
-      timestamp: new Date(Date.now() - 86400000 * 2), // 2 days ago
-    },
-  ]);
+  const { user, getUsername } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [balance, setBalanceState] = useState<number>(0);
+  const [holdings, setHoldings] = useState<StockHolding[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [balance, setBalanceState] = useState<number>(10000);
-  const [holdings, setHoldings] = useState<StockHolding[]>([
-    { ticker: 'AAPL', quantity: 10 },
-    { ticker: 'MSFT', quantity: 3 },
-    { ticker: 'NVDA', quantity: 2 },
-    { ticker: 'TSLA', quantity: 15 },
-  ]);
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const username = getUsername();
+        if (!username) {
+          setLoading(false);
+          return;
+        }
+        
+        console.log('Fetching user data for:', username);
+        
+        const balanceResponse = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
+        
+        if (balanceResponse.data && typeof balanceResponse.data.balance === 'number') {
+          console.log('Retrieved user balance:', balanceResponse.data.balance);
+          setBalanceState(balanceResponse.data.balance);
+        }
+        
+        const orderHistoryResponse = await axios.get(`${API_BASE_URL}/users/${username}/orders/history`);
+        
+        if (orderHistoryResponse.data && Array.isArray(orderHistoryResponse.data.orders)) {
+          console.log('Retrieved user order history:', orderHistoryResponse.data.orders);
+          
+          const mappedOrders = orderHistoryResponse.data.orders.map((order: any) => ({
+            id: order.order_id.toString() || Math.random().toString(36).substring(2, 9),
+            ticker: order.ticker || '',
+            type: (order.order_type === 'buy' ? 'Buy' : 'Sell') as OrderType,
+            executionType: 'Market' as OrderExecutionType,
+            price: order.price || 0,
+            size: order.shares || 0,
+            status: order.status === 'completed' ? 'Completed' : 'In-Progress' as OrderStatus,
+            timestamp: new Date(order.created_at || Date.now()),
+          }));
+          
+          setOrders(mappedOrders);
+        }
+        
+        const portfolioResponse = await axios.get(`${API_BASE_URL}/users/${username}/portfolio`);
+        
+        if (portfolioResponse.data?.user_summary?.holdings && Array.isArray(portfolioResponse.data.user_summary.holdings)) {
+          console.log('Retrieved user holdings:', portfolioResponse.data.user_summary.holdings);
+          
+          const mappedHoldings = portfolioResponse.data.user_summary.holdings.map((holding: any) => ({
+            ticker: holding.ticker || '',
+            quantity: holding.shares || 0,
+          }));
+          
+          setHoldings(mappedHoldings);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching user data in OrderContext:', error);
+        toast.error('Failed to load order data', {
+          description: 'Please try refreshing the page',
+        });
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user, getUsername]);
 
   const updateHoldings = (ticker: string, quantity: number, isBuy: boolean) => {
     setHoldings((prevHoldings) => {
@@ -203,6 +220,25 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const setBalance = (newBalance: number) => {
     setBalanceState(newBalance);
   };
+
+  if (loading && user) {
+    return (
+      <OrderContext.Provider
+        value={{
+          orders: [],
+          balance: 0,
+          setBalance,
+          holdings: [],
+          addOrder,
+          updateOrderStatus,
+          getOrdersByStatus,
+          getCompletedOrders,
+        }}
+      >
+        {children}
+      </OrderContext.Provider>
+    );
+  }
 
   return (
     <OrderContext.Provider

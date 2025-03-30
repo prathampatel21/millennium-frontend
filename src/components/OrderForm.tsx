@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
-import { ArrowRight, AlertCircle, CheckCircle, DollarSign, Tag } from 'lucide-react';
+import { ArrowRight, AlertCircle, CheckCircle, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-// Define the API base URL - adjust this based on where your Flask app is running
+// Define the API base URL
 const API_BASE_URL = 'http://127.0.0.1:5000';
 
 const OrderForm: React.FC = () => {
   const navigate = useNavigate();
-  const { addOrder, balance, setBalance } = useOrders();
+  const { addOrder, balance } = useOrders();
   const { getUsername } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -102,9 +102,6 @@ const OrderForm: React.FC = () => {
       console.log('Created parent order with ID:', parentOrderId);
       
       const portfolioResponse = await axios.get(`${API_BASE_URL}/users/${username}/portfolio`);
-      const updatedBalance = portfolioResponse.data.user_summary.balance;
-      
-      setBalance(updatedBalance);
       
       const orderSuccess = addOrder({
         ticker: formData.ticker.toUpperCase(),

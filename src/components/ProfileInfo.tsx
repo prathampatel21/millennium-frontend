@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User, Mail, LogOut, CheckCircle, DollarSign, Briefcase } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, Mail, LogOut, DollarSign, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOrders } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
@@ -14,55 +14,12 @@ const ProfileInfo: React.FC = () => {
   const { balance, setBalance, holdings } = useOrders();
   const [balanceInput, setBalanceInput] = useState(balance.toString());
   const [isEditingBalance, setIsEditingBalance] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Update balance input when the actual balance changes
-  useEffect(() => {
+  React.useEffect(() => {
     setBalanceInput(balance.toFixed(2));
   }, [balance]);
-
-  // Fetch user data from backend when component mounts
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!user) return;
-      
-      try {
-        // Get the username from auth context
-        const username = getUsername();
-        if (!username) return;
-        
-        console.log('Fetching user balance for:', username);
-        
-        // Fetch the user's balance from the MySQL database
-        const balanceResponse = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
-        
-        if (balanceResponse.data && typeof balanceResponse.data.balance === 'number') {
-          console.log('Retrieved user balance:', balanceResponse.data.balance);
-          setBalance(balanceResponse.data.balance);
-        }
-        
-        // Try to fetch the user's portfolio from backend
-        const portfolioResponse = await axios.get(`${API_BASE_URL}/users/${username}/portfolio`);
-        
-        // Update balance from portfolio data if not already set
-        if (portfolioResponse.data?.user_summary && typeof portfolioResponse.data.user_summary.balance === 'number') {
-          console.log('Retrieved user portfolio with balance:', portfolioResponse.data.user_summary.balance);
-          setBalance(portfolioResponse.data.user_summary.balance);
-        }
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        toast.error('Failed to load user data', {
-          description: 'Please try refreshing the page',
-        });
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, [user, getUsername, setBalance]);
 
   const handleLogout = async () => {
     await signOut();
@@ -104,14 +61,6 @@ const ProfileInfo: React.FC = () => {
       });
     }
   };
-
-  if (loading) {
-    return (
-      <div className="glass rounded-2xl p-8 animate-fade-in flex justify-center items-center" style={{ minHeight: '300px' }}>
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="glass rounded-2xl p-8 animate-fade-in">

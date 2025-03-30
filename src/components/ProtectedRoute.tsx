@@ -28,7 +28,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         }
         
         // Verify user exists in MySQL
-        await axios.get(`http://localhost:5000/users/${username}/balance`);
+        await axios.get(`http://127.0.0.1:5000/users/${username}/balance`);
         setAuthorized(true);
       } catch (error) {
         console.error('Error verifying user in MySQL database:', error);

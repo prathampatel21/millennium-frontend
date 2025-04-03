@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Sphere, Text } from '@react-three/drei';
@@ -60,10 +59,8 @@ const Trade = ({ start, end, progress, color, size }: any) => {
   
   return (
     <>
-      {/* Line */}
-      <line geometry={lineGeometry}>
-        <lineBasicMaterial attach="material" color={color} linewidth={1} />
-      </line>
+      {/* Line - using primitive instead of line */}
+      <primitive object={new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: color }))} />
       
       {/* Moving dot */}
       <mesh position={currentPos}>

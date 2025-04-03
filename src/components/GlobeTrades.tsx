@@ -1,5 +1,5 @@
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, Suspense } from 'react';
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -7,9 +7,64 @@ import * as THREE from 'three';
 // Earth component with texture
 const Earth = () => {
   const earthRef = useRef<THREE.Mesh>(null);
-  const earthTexture = useLoader(THREE.TextureLoader, '/earth-texture.jpg');
-  const bumpTexture = useLoader(THREE.TextureLoader, '/earth-bump.jpg');
-  const cloudsTexture = useLoader(THREE.TextureLoader, '/earth-clouds.png');
+  
+  // Use try-catch to handle texture loading errors
+  const [textures, setTextures] = useState({
+    earth: null,
+    bump: null,
+    clouds: null
+  });
+  
+  useEffect(() => {
+    // Preload textures to handle errors
+    const textureLoader = new THREE.TextureLoader();
+    
+    const loadTexture = (url, fallbackColor) => {
+      return new Promise((resolve) => {
+        textureLoader.load(
+          url,
+          (texture) => resolve(texture),
+          undefined,
+          () => {
+            // On error, create a colored material instead
+            console.error(`Failed to load texture: ${url}`);
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.fillStyle = fallbackColor;
+              ctx.fillRect(0, 0, 64, 64);
+            }
+            const fallbackTexture = new THREE.CanvasTexture(canvas);
+            resolve(fallbackTexture);
+          }
+        );
+      });
+    };
+    
+    // Load all textures
+    Promise.all([
+      loadTexture('/earth-texture.jpg', '#1E40AF'), // Blue for earth
+      loadTexture('/earth-bump.jpg', '#1E3A8A'),    // Dark blue for bump
+      loadTexture('/earth-clouds.png', '#F3F4F6')   // Light gray for clouds
+    ]).then(([earthTexture, bumpTexture, cloudsTexture]) => {
+      setTextures({
+        earth: earthTexture,
+        bump: bumpTexture,
+        clouds: cloudsTexture
+      });
+    });
+    
+    return () => {
+      // Cleanup textures
+      Object.values(textures).forEach(texture => {
+        if (texture) {
+          texture.dispose();
+        }
+      });
+    };
+  }, []);
   
   useFrame(() => {
     if (earthRef.current) {
@@ -17,16 +72,21 @@ const Earth = () => {
     }
   });
   
+  // Don't render until textures are loaded
+  if (!textures.earth || !textures.bump || !textures.clouds) {
+    return null;
+  }
+  
   return (
     <>
       {/* Earth sphere */}
       <mesh ref={earthRef}>
         <sphereGeometry args={[1, 64, 64]} />
         <meshPhongMaterial 
-          map={earthTexture}
-          bumpMap={bumpTexture}
+          map={textures.earth}
+          bumpMap={textures.bump}
           bumpScale={0.05}
-          specularMap={bumpTexture}
+          specularMap={textures.bump}
           specular={new THREE.Color('#111111')}
           shininess={5}
         />
@@ -36,7 +96,7 @@ const Earth = () => {
       <mesh>
         <sphereGeometry args={[1.01, 32, 32]} />
         <meshPhongMaterial 
-          map={cloudsTexture}
+          map={textures.clouds}
           transparent={true}
           opacity={0.4}
           depthWrite={false}
@@ -57,6 +117,14 @@ const Earth = () => {
   );
 };
 
+// Loading fallback
+const LoadingEarth = () => (
+  <mesh>
+    <sphereGeometry args={[1, 16, 16]} />
+    <meshBasicMaterial color="#1E40AF" wireframe />
+  </mesh>
+);
+
 // Main component
 const GlobeTrades = () => {
   return (
@@ -66,7 +134,9 @@ const GlobeTrades = () => {
         <pointLight position={[10, 10, 10]} intensity={1} />
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
         
-        <Earth />
+        <Suspense fallback={<LoadingEarth />}>
+          <Earth />
+        </Suspense>
         
         <OrbitControls 
           enablePan={false}

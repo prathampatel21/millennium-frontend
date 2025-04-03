@@ -1,6 +1,7 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Sphere, Text } from '@react-three/drei';
+import { OrbitControls, Sphere } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Generate random coordinates on the globe
@@ -17,7 +18,7 @@ const generateLocation = () => {
 };
 
 // Generate random trade data
-const generateTrades = (count: number) => {
+const generateTrades = (count) => {
   return Array.from({ length: count }, () => {
     const start = generateLocation();
     const end = generateLocation();
@@ -39,7 +40,7 @@ const generateTrades = (count: number) => {
 };
 
 // Component for a single trade animation
-const Trade = ({ start, end, progress, color, size }: any) => {
+const Trade = ({ start, end, progress, color, size }) => {
   // Create curved path between points
   const midPoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
   const distance = start.distanceTo(end);
@@ -59,8 +60,13 @@ const Trade = ({ start, end, progress, color, size }: any) => {
   
   return (
     <>
-      {/* Line - using primitive instead of line */}
-      <primitive object={new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: color }))} />
+      {/* Line - using directly created Three.js objects */}
+      <group>
+        <primitive object={new THREE.Line(
+          lineGeometry, 
+          new THREE.LineBasicMaterial({ color: color })
+        )} />
+      </group>
       
       {/* Moving dot */}
       <mesh position={currentPos}>
@@ -135,7 +141,7 @@ const Trades = () => {
 
 // Earth component with texture
 const Earth = () => {
-  const earthRef = useRef<THREE.Mesh>(null);
+  const earthRef = useRef();
   
   useFrame(() => {
     if (earthRef.current) {
@@ -144,22 +150,23 @@ const Earth = () => {
   });
   
   return (
-    <Sphere ref={earthRef} args={[1, 64, 64]}>
+    <mesh ref={earthRef}>
+      <sphereGeometry args={[1, 64, 64]} />
       <meshPhongMaterial 
         color="#2266aa" 
         emissive="#112244" 
         specular="#111111"
         shininess={10}
         opacity={0.8}
-        transparent
-        wireframe
+        transparent={true}
+        wireframe={true}
       />
-    </Sphere>
+    </mesh>
   );
 };
 
 // Main component
-const GlobeTrades: React.FC = () => {
+const GlobeTrades = () => {
   return (
     <div className="h-[300px] md:h-[400px] lg:h-[500px] w-full rounded-xl overflow-hidden glass">
       <Canvas camera={{ position: [0, 0, 2.5], fov: 45 }}>

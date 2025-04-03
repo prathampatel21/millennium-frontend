@@ -8,7 +8,6 @@ import {
   CarouselPrevious 
 } from "@/components/ui/carousel";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
@@ -22,7 +21,6 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import useEmblaCarousel from "embla-carousel-react";
 
 type StockData = {
@@ -300,15 +298,18 @@ const StockCarousel: React.FC = () => {
         </div>
       </div>
       
+      {/* Wrapping the carousel controls in a Carousel component for proper context */}
       <div className="flex justify-end gap-2 mt-4">
-        <CarouselPrevious 
-          onClick={() => emblaApi?.scrollPrev()} 
-          className="relative static left-0 translate-y-0" 
-        />
-        <CarouselNext 
-          onClick={() => emblaApi?.scrollNext()} 
-          className="relative static right-0 translate-y-0" 
-        />
+        <Carousel>
+          <CarouselPrevious 
+            onClick={() => emblaApi?.scrollPrev()} 
+            className="relative static left-0 translate-y-0" 
+          />
+          <CarouselNext 
+            onClick={() => emblaApi?.scrollNext()} 
+            className="relative static right-0 translate-y-0" 
+          />
+        </Carousel>
       </div>
     </div>
   );

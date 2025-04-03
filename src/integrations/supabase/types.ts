@@ -9,6 +9,160 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      app_user: {
+        Row: {
+          account_balance: number
+          username: string
+        }
+        Insert: {
+          account_balance?: number
+          username: string
+        }
+        Update: {
+          account_balance?: number
+          username?: string
+        }
+        Relationships: []
+      }
+      asset: {
+        Row: {
+          assetid: number
+          shares: number
+          ticker: string
+          username: string
+        }
+        Insert: {
+          assetid?: number
+          shares: number
+          ticker: string
+          username: string
+        }
+        Update: {
+          assetid?: number
+          shares?: number
+          ticker?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_username_fkey"
+            columns: ["username"]
+            isOneToOne: false
+            referencedRelation: "app_user"
+            referencedColumns: ["username"]
+          },
+        ]
+      }
+      child_order: {
+        Row: {
+          corderid: number
+          porderid: number
+          price: number
+          shares: number
+          status: Database["public"]["Enums"]["order_status"]
+          time: string
+          transactionid: number | null
+          type: Database["public"]["Enums"]["order_type"]
+        }
+        Insert: {
+          corderid?: number
+          porderid: number
+          price: number
+          shares: number
+          status: Database["public"]["Enums"]["order_status"]
+          time: string
+          transactionid?: number | null
+          type: Database["public"]["Enums"]["order_type"]
+        }
+        Update: {
+          corderid?: number
+          porderid?: number
+          price?: number
+          shares?: number
+          status?: Database["public"]["Enums"]["order_status"]
+          time?: string
+          transactionid?: number | null
+          type?: Database["public"]["Enums"]["order_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_order_porderid_fkey"
+            columns: ["porderid"]
+            isOneToOne: false
+            referencedRelation: "order_book"
+            referencedColumns: ["porderid"]
+          },
+          {
+            foreignKeyName: "child_order_porderid_fkey"
+            columns: ["porderid"]
+            isOneToOne: false
+            referencedRelation: "parent_order"
+            referencedColumns: ["porderid"]
+          },
+          {
+            foreignKeyName: "child_order_porderid_fkey"
+            columns: ["porderid"]
+            isOneToOne: false
+            referencedRelation: "user_completed_orders"
+            referencedColumns: ["parent_order_id"]
+          },
+          {
+            foreignKeyName: "child_order_porderid_fkey"
+            columns: ["porderid"]
+            isOneToOne: false
+            referencedRelation: "user_order_status"
+            referencedColumns: ["parent_order_id"]
+          },
+          {
+            foreignKeyName: "child_order_transactionid_fkey"
+            columns: ["transactionid"]
+            isOneToOne: false
+            referencedRelation: "transaction"
+            referencedColumns: ["transactionid"]
+          },
+        ]
+      }
+      parent_order: {
+        Row: {
+          amount: number
+          porderid: number
+          shares: number
+          ticker: string
+          time: string
+          total_status: Database["public"]["Enums"]["order_status"]
+          type: Database["public"]["Enums"]["order_type"]
+          username: string
+        }
+        Insert: {
+          amount: number
+          porderid?: number
+          shares: number
+          ticker: string
+          time: string
+          total_status: Database["public"]["Enums"]["order_status"]
+          type: Database["public"]["Enums"]["order_type"]
+          username: string
+        }
+        Update: {
+          amount?: number
+          porderid?: number
+          shares?: number
+          ticker?: string
+          time?: string
+          total_status?: Database["public"]["Enums"]["order_status"]
+          type?: Database["public"]["Enums"]["order_type"]
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_order_username_fkey"
+            columns: ["username"]
+            isOneToOne: false
+            referencedRelation: "app_user"
+            referencedColumns: ["username"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -30,15 +184,178 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction: {
+        Row: {
+          buyer_username: string
+          completed_time: string
+          seller_username: string
+          transactionid: number
+        }
+        Insert: {
+          buyer_username: string
+          completed_time: string
+          seller_username: string
+          transactionid?: number
+        }
+        Update: {
+          buyer_username?: string
+          completed_time?: string
+          seller_username?: string
+          transactionid?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_buyer_username_fkey"
+            columns: ["buyer_username"]
+            isOneToOne: false
+            referencedRelation: "app_user"
+            referencedColumns: ["username"]
+          },
+          {
+            foreignKeyName: "transaction_seller_username_fkey"
+            columns: ["seller_username"]
+            isOneToOne: false
+            referencedRelation: "app_user"
+            referencedColumns: ["username"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      order_book: {
+        Row: {
+          corderid: number | null
+          porderid: number | null
+          price: number | null
+          shares: number | null
+          ticker: string | null
+          time: string | null
+          type: Database["public"]["Enums"]["order_type"] | null
+        }
+        Relationships: []
+      }
+      user_completed_orders: {
+        Row: {
+          amount: number | null
+          order_time: string | null
+          order_type: Database["public"]["Enums"]["order_type"] | null
+          parent_order_id: number | null
+          shares: number | null
+          ticker: string | null
+          total_status: Database["public"]["Enums"]["order_status"] | null
+          username: string | null
+        }
+        Insert: {
+          amount?: number | null
+          order_time?: string | null
+          order_type?: Database["public"]["Enums"]["order_type"] | null
+          parent_order_id?: number | null
+          shares?: number | null
+          ticker?: string | null
+          total_status?: Database["public"]["Enums"]["order_status"] | null
+          username?: string | null
+        }
+        Update: {
+          amount?: number | null
+          order_time?: string | null
+          order_type?: Database["public"]["Enums"]["order_type"] | null
+          parent_order_id?: number | null
+          shares?: number | null
+          ticker?: string | null
+          total_status?: Database["public"]["Enums"]["order_status"] | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_order_username_fkey"
+            columns: ["username"]
+            isOneToOne: false
+            referencedRelation: "app_user"
+            referencedColumns: ["username"]
+          },
+        ]
+      }
+      user_order_status: {
+        Row: {
+          child_order_id: number | null
+          child_shares: number | null
+          child_status: Database["public"]["Enums"]["order_status"] | null
+          execution_price: number | null
+          last_update_time: string | null
+          order_placement_time: string | null
+          order_stage: string | null
+          order_type: Database["public"]["Enums"]["order_type"] | null
+          parent_order_id: number | null
+          parent_status: Database["public"]["Enums"]["order_status"] | null
+          ticker: string | null
+          username: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_order_username_fkey"
+            columns: ["username"]
+            isOneToOne: false
+            referencedRelation: "app_user"
+            referencedColumns: ["username"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      complete_child_order: {
+        Args: {
+          in_corderid: number
+        }
+        Returns: undefined
+      }
+      complete_parent_order: {
+        Args: {
+          in_porderid: number
+        }
+        Returns: undefined
+      }
+      create_child_order: {
+        Args: {
+          p_porderid: number
+          c_price: number
+          c_shares: number
+        }
+        Returns: undefined
+      }
+      create_parent_order: {
+        Args: {
+          p_ticker: string
+          p_shares: number
+          p_type: Database["public"]["Enums"]["order_type"]
+          p_amount: number
+          p_username: string
+        }
+        Returns: undefined
+      }
+      create_user: {
+        Args: {
+          p_username: string
+          initial_balance: number
+        }
+        Returns: undefined
+      }
+      get_user_balance: {
+        Args: {
+          p_username: string
+        }
+        Returns: number
+      }
+      update_user_balance: {
+        Args: {
+          target_username: string
+          new_balance: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      order_status: "pending" | "completed"
+      order_type: "buy" | "sell"
     }
     CompositeTypes: {
       [_ in never]: never

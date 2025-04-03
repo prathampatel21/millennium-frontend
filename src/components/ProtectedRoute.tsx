@@ -2,11 +2,8 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { toast } from 'sonner';
-
-// Define API base URL
-const API_BASE_URL = 'http://127.0.0.1:5000';
+import { supabase } from '../integrations/supabase/client';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -18,7 +15,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    const verifyUserInMySQL = async () => {
+    const verifyUserInSupabase = async () => {
       if (!user) {
         setVerifying(false);
         return;
@@ -31,30 +28,35 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           return;
         }
         
-        console.log('Verifying user in MySQL database:', username);
+        console.log('Verifying user in Supabase database:', username);
         
         try {
           // Try to get user balance - this will fail if user doesn't exist
-          const response = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
-          console.log('User verification response:', response.data);
+          const { data, error } = await supabase.rpc('get_user_balance', { p_username: username });
+          
+          if (error) throw error;
+          
+          console.log('User verification response:', data);
           setAuthorized(true);
         } catch (error) {
-          console.log('User not found in MySQL, creating new user with default balance of 20');
+          console.log('User not found in Supabase, creating new user with default balance of 20');
           
-          // User doesn't exist in MySQL, create a new user with default balance of 20
-          const createResponse = await axios.post(`${API_BASE_URL}/users`, {
-            username: username,
+          // User doesn't exist in Supabase, create a new user with default balance of 20
+          const { error: createError } = await supabase.rpc('create_user', {
+            p_username: username,
             initial_balance: 20
           });
           
-          console.log('Created new user in MySQL:', createResponse.data);
+          if (createError) throw createError;
+          
+          console.log('Created new user in Supabase');
           toast.success('Welcome! Your account has been created with $20 starting balance', {
             duration: 5000
           });
           setAuthorized(true);
         }
-      } catch (error) {
-        console.error('Error verifying/creating user in MySQL database:', error);
+      } catch (error: any) {
+        console.error('Error verifying/creating user in Supabase database:', error);
         setAuthorized(false);
       } finally {
         setVerifying(false);
@@ -62,7 +64,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     };
     
     if (!isLoading) {
-      verifyUserInMySQL();
+      verifyUserInSupabase();
     }
   }, [user, isLoading, getUsername]);
 

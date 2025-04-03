@@ -1,9 +1,10 @@
+
 from decimal import Decimal
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import mysql.connector
 import os
 from dotenv import load_dotenv
+from supabase import create_client, Client
 
 # Load environment variables
 load_dotenv()
@@ -11,15 +12,10 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Database connection function
-def get_db_connection():
-    mydb = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        passwd="Pratham2005!@",
-        database="trading_db"
-    )
-    return mydb
+# Supabase client setup
+supabase_url = os.environ.get("SUPABASE_URL")
+supabase_key = os.environ.get("SUPABASE_KEY")
+supabase: Client = create_client(supabase_url, supabase_key)
 
 def convert_decimal_to_float(data):
     if isinstance(data, list):
@@ -42,14 +38,8 @@ def create_user():
         return jsonify({"error": "Initial balance cannot be negative"}), 400
     
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.callproc('create_user', [username, initial_balance])
-        conn.commit()
-        
-        # For a username-based PK, we just return the provided username
-        cursor.close()
-        conn.close()
+        # Call the RPC function to create a user
+        response = supabase.rpc('create_user', {'p_username': username, 'initial_balance': initial_balance}).execute()
         
         return jsonify({"username": username, "balance": convert_decimal_to_float(initial_balance)}), 201
     except Exception as e:
@@ -64,12 +54,11 @@ def update_balance(username):
         return jsonify({"error": "Invalid balance value"}), 400
     
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.callproc('update_user_balance', [username, new_balance])
-        conn.commit()
-        cursor.close()
-        conn.close()
+        # Call the RPC function to update user balance
+        response = supabase.rpc('update_user_balance', {
+            'target_username': username, 
+            'new_balance': new_balance
+        }).execute()
         
         return jsonify({"username": username, "new_balance": convert_decimal_to_float(new_balance)}), 200
     except Exception as e:
@@ -79,46 +68,27 @@ def update_balance(username):
 @app.route('/users/<string:username>/balance', methods=['GET'])
 def get_balance(username):
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.callproc('get_user_balance', [username])
+        # Call the RPC function to get user balance
+        response = supabase.rpc('get_user_balance', {'p_username': username}).execute()
         
-        # Get the first result set from the stored procedure
-        result = None
-        for res in cursor.stored_results():
-            result = res.fetchone()
-            break
-        
-        cursor.close()
-        conn.close()
-        
-        if result is None:
+        if not response.data:
             return jsonify({"error": "User not found"}), 404
             
-        return jsonify({"username": username, "balance": convert_decimal_to_float(result['account_balance'])}), 200
+        balance = response.data
+        return jsonify({"username": username, "balance": convert_decimal_to_float(balance)}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/users/<string:username>/portfolio', methods=['GET'])
 def get_portfolio(username):
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.callproc('get_user_account_info', [username])
+        # Query the user_account_info view
+        response = supabase.table('app_user').select('*').eq('username', username).execute()
         
-        # Get user summary from the first result set
-        user_summary = None
-        stored_results = cursor.stored_results()
-        for result in stored_results:
-            user_summary = result.fetchone()
-            break
-        
-        cursor.close()
-        conn.close()
-        
-        if not user_summary:
+        if not response.data:
             return jsonify({"error": "User not found"}), 404
             
+        user_summary = response.data[0]
         return jsonify({
             "user_summary": convert_decimal_to_float(user_summary)
         }), 200
@@ -146,17 +116,18 @@ def create_parent_order():
         return jsonify({"error": "Order type must be 'buy' or 'sell'"}), 400
     
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.callproc('create_parent_order', [ticker, shares, order_type, amount, username])
-        conn.commit()
+        # Call the RPC function to create a parent order
+        response = supabase.rpc('create_parent_order', {
+            'p_ticker': ticker, 
+            'p_shares': shares, 
+            'p_type': order_type, 
+            'p_amount': amount, 
+            'p_username': username
+        }).execute()
         
         # Get the ID of the newly created order
-        cursor.execute("SELECT LAST_INSERT_ID()")
-        order_id = cursor.fetchone()[0]
-        
-        cursor.close()
-        conn.close()
+        order_query = supabase.table('parent_order').select('porderid').order('porderid', desc=True).limit(1).execute()
+        order_id = order_query.data[0]['porderid'] if order_query.data else None
         
         return jsonify({
             "order_id": order_id,
@@ -176,7 +147,7 @@ def create_child_order():
     price = data.get('price')
     shares = data.get('shares')
     
-    # Validate inputs (note: no amount parameter for child order now)
+    # Validate inputs
     if not all([parent_order_id, price, shares]):
         return jsonify({"error": "Missing required fields"}), 400
     
@@ -184,17 +155,16 @@ def create_child_order():
         return jsonify({"error": "Price and shares must be positive"}), 400
     
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.callproc('create_child_order', [parent_order_id, price, shares])
-        conn.commit()
+        # Call the RPC function to create a child order
+        response = supabase.rpc('create_child_order', {
+            'p_porderid': parent_order_id, 
+            'c_price': price, 
+            'c_shares': shares
+        }).execute()
         
         # Get the ID of the newly created child order
-        cursor.execute("SELECT LAST_INSERT_ID()")
-        child_order_id = cursor.fetchone()[0]
-        
-        cursor.close()
-        conn.close()
+        child_query = supabase.table('child_order').select('corderid').order('corderid', desc=True).limit(1).execute()
+        child_order_id = child_query.data[0]['corderid'] if child_query.data else None
         
         return jsonify({
             "child_order_id": child_order_id,
@@ -208,12 +178,8 @@ def create_child_order():
 @app.route('/orders/child/<int:child_order_id>/complete', methods=['PUT'])
 def complete_child_order(child_order_id):
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.callproc('complete_child_order', [child_order_id])
-        conn.commit()
-        cursor.close()
-        conn.close()
+        # Call the RPC function to complete a child order
+        response = supabase.rpc('complete_child_order', {'in_corderid': child_order_id}).execute()
         
         return jsonify({"message": f"Child order {child_order_id} completed successfully"}), 200
     except Exception as e:
@@ -222,12 +188,8 @@ def complete_child_order(child_order_id):
 @app.route('/orders/parent/<int:parent_order_id>/complete', methods=['PUT'])
 def complete_parent_order(parent_order_id):
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.callproc('complete_parent_order', [parent_order_id])
-        conn.commit()
-        cursor.close()
-        conn.close()
+        # Call the RPC function to complete a parent order
+        response = supabase.rpc('complete_parent_order', {'in_porderid': parent_order_id}).execute()
         
         return jsonify({"message": f"Parent order {parent_order_id} completed successfully"}), 200
     except Exception as e:
@@ -237,12 +199,9 @@ def complete_parent_order(parent_order_id):
 @app.route('/orders/active', methods=['GET'])
 def get_active_orders():
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM order_book")
-        orders = cursor.fetchall()
-        cursor.close()
-        conn.close()
+        # Query the order_book view
+        response = supabase.table('order_book').select('*').execute()
+        orders = response.data
         
         return jsonify({"orders": convert_decimal_to_float(orders)}), 200
     except Exception as e:
@@ -251,13 +210,9 @@ def get_active_orders():
 @app.route('/users/<string:username>/orders/status', methods=['GET'])
 def get_user_order_status(username):
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        # The view now uses the "username" column instead of a numeric userID
-        cursor.execute("SELECT * FROM user_order_status WHERE username = %s", (username,))
-        orders = cursor.fetchall()
-        cursor.close()
-        conn.close()
+        # Query the user_order_status view
+        response = supabase.table('user_order_status').select('*').eq('username', username).execute()
+        orders = response.data
         
         return jsonify({"orders": convert_decimal_to_float(orders)}), 200
     except Exception as e:
@@ -266,13 +221,9 @@ def get_user_order_status(username):
 @app.route('/users/<string:username>/orders/history', methods=['GET'])
 def get_user_order_history(username):
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        # The completed orders view now filters by username
-        cursor.execute("SELECT * FROM user_completed_orders WHERE username = %s", (username,))
-        orders = cursor.fetchall()
-        cursor.close()
-        conn.close()
+        # Query the user_completed_orders view
+        response = supabase.table('user_completed_orders').select('*').eq('username', username).execute()
+        orders = response.data
         
         # Transform the data to match the expected format in the frontend
         transformed_orders = []

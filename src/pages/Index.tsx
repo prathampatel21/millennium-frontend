@@ -16,6 +16,7 @@ const Index = () => {
           <GlobeTrades />
         </div>
         
+        {/* Hero Section */}
         <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16 relative z-10">
           <div className="max-w-3xl animate-fade-in">
             <span className="inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">

@@ -1,12 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '../integrations/supabase/client';
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVerificationSent, setIsVerificationSent] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -43,6 +46,25 @@ const Auth = () => {
     return true;
   };
 
+  // Check if username already exists
+  const checkUsernameExists = async (username: string) => {
+    try {
+      // First check if the username exists in supabase
+      const { data, error } = await supabase.rpc('get_user_balance', {
+        p_username: username
+      });
+      
+      if (!error) {
+        // If no error, then the username exists
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -50,10 +72,19 @@ const Auth = () => {
     setIsSubmitting(true);
     try {
       if (isSignUp) {
+        // Check if username already exists
+        const usernameExists = await checkUsernameExists(formData.username);
+        if (usernameExists) {
+          toast.error('Username already taken', {
+            description: 'Please choose another username',
+            icon: <AlertTriangle className="h-4 w-4" />
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
         await signUp(formData.email, formData.password, formData.username);
-        // After successful signup, sign in automatically
-        await signIn(formData.email, formData.password);
-        navigate('/profile');
+        setIsVerificationSent(true);
       } else {
         await signIn(formData.email, formData.password);
         navigate('/profile');
@@ -65,6 +96,39 @@ const Auth = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (isVerificationSent) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="flex justify-center">
+            <CheckCircle2 className="h-12 w-12 text-green-500" />
+          </div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Account created!
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Please check your email to verify your account.
+          </p>
+          <div className="mt-8 glass rounded-lg py-8 px-4 shadow sm:px-10">
+            <p className="text-center text-gray-600 mb-4">
+              Once verified, you can sign in with your credentials.
+            </p>
+            <button
+              onClick={() => {
+                setIsVerificationSent(false);
+                setIsSignUp(false);
+              }}
+              className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+            >
+              Go to Sign In
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">

@@ -3,6 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import OrderForm from '../components/OrderForm';
+import StockCarousel from '../components/StockCarousel';
 import { ArrowLeft } from 'lucide-react';
 
 const CreateOrder = () => {
@@ -13,7 +14,7 @@ const CreateOrder = () => {
       <main className="pt-20 pb-16">
         <div className="container mx-auto px-4 md:px-6 py-8 md:py-12">
           <div className="max-w-4xl mx-auto">
-            <div className="mb-8">
+            <div className="mb-6">
               <Link
                 to="/"
                 className="inline-flex items-center text-gray-600 hover:text-primary transition-colors text-sm"
@@ -31,6 +32,10 @@ const CreateOrder = () => {
                   Fill in the details below to create a new trading order
                 </p>
               </div>
+            </div>
+            
+            <div className="mb-8">
+              <StockCarousel />
             </div>
             
             <OrderForm />

@@ -1,5 +1,4 @@
-
-import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
 import { useAuth } from './AuthContext';
@@ -37,6 +36,8 @@ interface OrderContextType {
   getOrdersByStatus: (status: OrderStatus) => Order[];
   getCompletedOrders: () => Order[];
   refreshUserData: () => Promise<void>;
+  formData?: FormData;
+  setFormData?: (data: FormData) => void;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -49,14 +50,20 @@ export const useOrders = () => {
   return context;
 };
 
-export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, getUsername } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [balance, setBalanceState] = useState<number>(0);
   const [holdings, setHoldings] = useState<StockHolding[]>([]);
   const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState<FormData>({
+    ticker: '',
+    type: 'Buy',
+    executionType: 'Market',
+    price: '',
+    size: '',
+  });
 
-  // Fetch the user's balance from the database
   const fetchUserBalance = useCallback(async () => {
     if (!user) return;
     
@@ -68,7 +75,6 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const balanceResponse = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
       
       if (balanceResponse.data) {
-        // Convert the balance to a number regardless of whether it's a string or number
         const balanceValue = parseFloat(balanceResponse.data.balance);
         
         if (!isNaN(balanceValue)) {
@@ -83,7 +89,6 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [user, getUsername]);
 
-  // This function refreshes all user data from the database
   const refreshUserData = useCallback(async () => {
     if (!user) {
       setLoading(false);
@@ -99,10 +104,8 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       
       console.log('Fetching user data for:', username);
       
-      // Fetch balance from MySQL
       await fetchUserBalance();
       
-      // Fetch order history from MySQL
       const orderHistoryResponse = await axios.get(`${API_BASE_URL}/users/${username}/orders/history`);
       
       if (orderHistoryResponse.data && Array.isArray(orderHistoryResponse.data.orders)) {
@@ -122,7 +125,6 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setOrders(mappedOrders);
       }
       
-      // Fetch portfolio data from MySQL
       const portfolioResponse = await axios.get(`${API_BASE_URL}/users/${username}/portfolio`);
       
       if (portfolioResponse.data?.user_summary?.holdings && Array.isArray(portfolioResponse.data.user_summary.holdings)) {
@@ -146,32 +148,28 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [user, getUsername, fetchUserBalance]);
 
-  // Fetch data when component mounts or when user changes
   useEffect(() => {
     if (user) {
       refreshUserData();
     }
   }, [user, refreshUserData]);
 
-  // Set up periodic data refresh
   useEffect(() => {
-    // Immediately fetch when the component mounts
     if (user) {
       fetchUserBalance();
     }
     
-    // Then set up interval for periodic updates
     const balanceIntervalId = setInterval(() => {
       if (user) {
         fetchUserBalance();
       }
-    }, 15000); // Check every 15 seconds
+    }, 15000);
     
     const dataIntervalId = setInterval(() => {
       if (user && !loading) {
         refreshUserData();
       }
-    }, 30000); // Refresh full data every 30 seconds
+    }, 30000);
     
     return () => {
       clearInterval(balanceIntervalId);
@@ -216,7 +214,6 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         return false;
       }
       
-      // Create parent order in MySQL database
       const orderResponse = await axios.post(`${API_BASE_URL}/orders/parent`, {
         ticker: newOrder.ticker,
         shares: newOrder.size,
@@ -227,10 +224,8 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       
       console.log('Order created in MySQL:', orderResponse.data);
       
-      // Immediately fetch the latest balance after order creation
       await fetchUserBalance();
       
-      // Then refresh full user data
       await refreshUserData();
       
       toast.success('Order placed successfully', {
@@ -271,12 +266,10 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
     
     try {
-      // Update balance in MySQL database
       await axios.put(`${API_BASE_URL}/users/${username}/balance`, {
         balance: newBalance
       });
       
-      // Immediately fetch the latest balance to ensure consistency
       await fetchUserBalance();
     } catch (error) {
       console.error('Error updating balance:', error);
@@ -304,6 +297,8 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         getOrdersByStatus,
         getCompletedOrders,
         refreshUserData,
+        formData,
+        setFormData,
       }}
     >
       {children}

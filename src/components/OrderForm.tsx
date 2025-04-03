@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 
 const OrderForm: React.FC = () => {
   const navigate = useNavigate();
-  const { addOrder, balance } = useOrders();
+  const { addOrder, balance, formData: contextFormData, setFormData: setContextFormData } = useOrders();
   const { getUsername } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -18,6 +18,12 @@ const OrderForm: React.FC = () => {
     size: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (contextFormData && setContextFormData) {
+      setFormData(contextFormData);
+    }
+  }, [contextFormData]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -44,7 +50,12 @@ const OrderForm: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const updatedFormData = { ...formData, [name]: value };
+    setFormData(updatedFormData);
+    
+    if (setContextFormData) {
+      setContextFormData(updatedFormData);
+    }
     
     if (errors[name]) {
       setErrors((prev) => {
@@ -98,13 +109,18 @@ const OrderForm: React.FC = () => {
           icon: <CheckCircle className="h-4 w-4" />,
         });
         
-        setFormData({
+        const emptyForm = {
           ticker: '',
           type: 'Buy',
           executionType: 'Market',
           price: '',
           size: '',
-        });
+        };
+        
+        setFormData(emptyForm);
+        if (setContextFormData) {
+          setContextFormData(emptyForm);
+        }
         
         setTimeout(() => {
           navigate('/orders');

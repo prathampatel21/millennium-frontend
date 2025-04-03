@@ -4,10 +4,6 @@ import { useOrders } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
 import { ArrowRight, AlertCircle, CheckCircle, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
-import axios from 'axios';
-
-// Define the API base URL
-const API_BASE_URL = 'http://127.0.0.1:5000';
 
 const OrderForm: React.FC = () => {
   const navigate = useNavigate();
@@ -88,21 +84,6 @@ const OrderForm: React.FC = () => {
         throw new Error('User not authenticated');
       }
       
-      const amount = orderPrice * Number(formData.size);
-      
-      const orderResponse = await axios.post(`${API_BASE_URL}/orders/parent`, {
-        ticker: formData.ticker.toUpperCase(),
-        shares: Number(formData.size),
-        type: formData.type.toLowerCase(),
-        amount: amount,
-        username: username
-      });
-      
-      const parentOrderId = orderResponse.data.order_id;
-      console.log('Created parent order with ID:', parentOrderId);
-      
-      const portfolioResponse = await axios.get(`${API_BASE_URL}/users/${username}/portfolio`);
-      
       const orderSuccess = await addOrder({
         ticker: formData.ticker.toUpperCase(),
         type: formData.type as 'Buy' | 'Sell',
@@ -132,10 +113,6 @@ const OrderForm: React.FC = () => {
     } catch (error) {
       console.error('Error submitting order:', error);
       let errorMessage = 'Please try again later';
-      
-      if (axios.isAxiosError(error) && error.response) {
-        errorMessage = error.response.data.error || errorMessage;
-      }
       
       toast.error('Failed to submit order', {
         description: errorMessage,

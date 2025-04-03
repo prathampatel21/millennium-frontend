@@ -36,14 +36,14 @@ const OrderHistory = () => {
           console.log('Retrieved user order history:', response.data.orders);
           
           const mappedOrders = response.data.orders.map((order: any) => ({
-            id: order.order_id?.toString() || '',
+            id: order.parent_order_id?.toString() || '',
             ticker: order.ticker || '',
             type: (order.order_type === 'buy' ? 'Buy' : 'Sell'),
             executionType: 'Market',
             price: parseFloat(order.price) || 0,
             size: parseInt(order.shares) || 0,
             status: 'Completed', // Order history only shows completed orders
-            timestamp: new Date(order.created_at || Date.now()),
+            timestamp: new Date(order.created_at || order.order_time || Date.now()),
           }));
           
           setCompletedOrders(mappedOrders);

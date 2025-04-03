@@ -274,7 +274,27 @@ def get_user_order_history(username):
         cursor.close()
         conn.close()
         
-        return jsonify({"orders": convert_decimal_to_float(orders)}), 200
+        # Transform the data to match the expected format in the frontend
+        transformed_orders = []
+        for order in orders:
+            # Convert decimal values to float
+            transformed_order = convert_decimal_to_float(order)
+            
+            # Add created_at field for compatibility with frontend
+            if 'order_time' in transformed_order:
+                transformed_order['created_at'] = transformed_order['order_time']
+            
+            # Add price field if it doesn't exist (calculate from amount and shares)
+            if 'price' not in transformed_order and 'amount' in transformed_order and 'shares' in transformed_order:
+                shares = float(transformed_order['shares'])
+                if shares > 0:
+                    transformed_order['price'] = float(transformed_order['amount']) / shares
+                else:
+                    transformed_order['price'] = 0
+            
+            transformed_orders.append(transformed_order)
+        
+        return jsonify({"orders": transformed_orders}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

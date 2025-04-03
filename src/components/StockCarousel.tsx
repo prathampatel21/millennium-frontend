@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Carousel, 
   CarouselContent, 
@@ -12,6 +13,17 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
 import { OrderFormData } from '../types/order';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import useEmblaCarousel from "embla-carousel-react";
 
 type StockData = {
   ticker: string;
@@ -19,31 +31,108 @@ type StockData = {
   price: number;
   change: number;
   changePercent: number;
+  chartData: Array<{ day: string; value: number }>;
+};
+
+// Generate mock chart data for each stock
+const generateChartData = (basePrice: number, volatility: number, trend: number) => {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  return days.map((day, index) => {
+    // Create a price that follows a trend but has some randomness
+    const noise = (Math.random() - 0.5) * volatility;
+    const trendEffect = trend * index / 10;
+    const value = basePrice * (1 + noise + trendEffect);
+    return { day, value: parseFloat(value.toFixed(2)) };
+  });
 };
 
 const popularStocks: StockData[] = [
-  { ticker: 'AAPL', name: 'Apple Inc.', price: 174.79, change: 2.35, changePercent: 1.36 },
-  { ticker: 'MSFT', name: 'Microsoft Corp.', price: 416.38, change: 5.21, changePercent: 1.27 },
-  { ticker: 'NVDA', name: 'NVIDIA Corp.', price: 950.02, change: -3.65, changePercent: -0.38 },
-  { ticker: 'AMZN', name: 'Amazon.com Inc.', price: 178.25, change: 1.43, changePercent: 0.81 },
-  { ticker: 'TSLA', name: 'Tesla Inc.', price: 177.56, change: -1.98, changePercent: -1.1 },
-  { ticker: 'GOOG', name: 'Alphabet Inc.', price: 170.63, change: 0.87, changePercent: 0.51 },
-  { ticker: 'META', name: 'Meta Platforms Inc.', price: 480.28, change: 7.42, changePercent: 1.57 },
-  { ticker: 'AMD', name: 'Advanced Micro Devices', price: 147.41, change: 2.89, changePercent: 2.0 },
+  { 
+    ticker: 'AAPL', 
+    name: 'Apple Inc.', 
+    price: 174.79, 
+    change: 2.35, 
+    changePercent: 1.36,
+    chartData: generateChartData(174.79, 0.03, 0.01)
+  },
+  { 
+    ticker: 'MSFT', 
+    name: 'Microsoft Corp.', 
+    price: 416.38, 
+    change: 5.21, 
+    changePercent: 1.27,
+    chartData: generateChartData(416.38, 0.02, 0.015)
+  },
+  { 
+    ticker: 'NVDA', 
+    name: 'NVIDIA Corp.', 
+    price: 950.02, 
+    change: -3.65, 
+    changePercent: -0.38,
+    chartData: generateChartData(950.02, 0.04, -0.005)
+  },
+  { 
+    ticker: 'AMZN', 
+    name: 'Amazon.com Inc.', 
+    price: 178.25, 
+    change: 1.43, 
+    changePercent: 0.81,
+    chartData: generateChartData(178.25, 0.025, 0.01)
+  },
+  { 
+    ticker: 'TSLA', 
+    name: 'Tesla Inc.', 
+    price: 177.56, 
+    change: -1.98, 
+    changePercent: -1.1,
+    chartData: generateChartData(177.56, 0.05, -0.015)
+  },
+  { 
+    ticker: 'GOOG', 
+    name: 'Alphabet Inc.', 
+    price: 170.63, 
+    change: 0.87, 
+    changePercent: 0.51,
+    chartData: generateChartData(170.63, 0.02, 0.008)
+  },
+  { 
+    ticker: 'META', 
+    name: 'Meta Platforms Inc.', 
+    price: 480.28, 
+    change: 7.42, 
+    changePercent: 1.57,
+    chartData: generateChartData(480.28, 0.03, 0.02)
+  },
+  { 
+    ticker: 'AMD', 
+    name: 'Advanced Micro Devices', 
+    price: 147.41, 
+    change: 2.89, 
+    changePercent: 2.0,
+    chartData: generateChartData(147.41, 0.04, 0.025)
+  },
 ];
 
-const StockCard: React.FC<{ stock: StockData; isActive: boolean; onSelect: () => void }> = ({ 
+interface StockCardProps {
+  stock: StockData; 
+  isActive: boolean; 
+  onSelect: () => void;
+  isHovered: boolean;
+}
+
+const StockCard: React.FC<StockCardProps> = ({ 
   stock, 
   isActive,
-  onSelect
+  onSelect,
+  isHovered
 }) => {
   const isPositive = stock.change >= 0;
   
   return (
     <Card 
-      className={`w-full transition-all duration-200 cursor-pointer hover:shadow-lg ${
+      className={`w-full transition-all duration-300 cursor-pointer hover:shadow-lg ${
         isActive ? 'scale-105 border-primary shadow-md' : ''
-      }`}
+      } ${isHovered ? 'scale-[1.03]' : ''}`}
       onClick={onSelect}
     >
       <CardHeader className="pb-2">
@@ -61,24 +150,33 @@ const StockCard: React.FC<{ stock: StockData; isActive: boolean; onSelect: () =>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pb-2">
-        <div className="flex flex-col space-y-1">
-          <div className="w-full h-12 bg-gray-100 rounded-md relative overflow-hidden">
-            {[...Array(20)].map((_, i) => {
-              const height = 20 + Math.sin(i * 0.5) * 15 + Math.random() * 10;
-              return (
-                <div 
-                  key={i} 
-                  className={`flex-1 ${isPositive ? 'bg-green-400' : 'bg-red-400'}`}
-                  style={{ 
-                    height: `${height}%`,
-                    opacity: 0.7 + (i / 20) * 0.3
-                  }}
-                />
-              );
-            })}
-          </div>
-        </div>
+      <CardContent className="pb-2 h-[100px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={stock.chartData}>
+            <Line 
+              type="monotone" 
+              dataKey="value" 
+              stroke={isPositive ? "#10B981" : "#EF4444"} 
+              strokeWidth={2} 
+              dot={false} 
+              activeDot={{ r: 4 }}
+            />
+            <XAxis dataKey="day" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis hide domain={['auto', 'auto']} />
+            <Tooltip 
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  return (
+                    <div className="bg-white p-2 rounded-md border shadow-sm text-xs">
+                      <p className="font-medium">${payload[0].value}</p>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
       </CardContent>
       <CardFooter className="pt-0">
         <div className="flex justify-between items-center w-full">
@@ -94,10 +192,73 @@ const StockCard: React.FC<{ stock: StockData; isActive: boolean; onSelect: () =>
 
 const StockCarousel: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const navigate = useNavigate();
   const { setFormData } = useOrders();
+  const isMobile = useIsMobile();
+  const autoplayRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleSelectStock = (stock: StockData) => {
+  // Setting up the carousel with autoplay options
+  const [emblaRef, emblaApi] = useEmblaCarousel({ 
+    loop: true,
+    align: "start",
+    skipSnaps: false,
+  });
+
+  // Auto-scroll the carousel
+  useEffect(() => {
+    if (emblaApi) {
+      const autoplay = () => {
+        if (!emblaApi.canScrollNext()) {
+          emblaApi.scrollTo(0);
+        } else {
+          emblaApi.scrollNext();
+        }
+      };
+
+      // Start autoplay
+      autoplayRef.current = setInterval(autoplay, 3000);
+
+      // Clear autoplay on mouse enter
+      const stopOnInteraction = () => {
+        if (autoplayRef.current) {
+          clearInterval(autoplayRef.current);
+          autoplayRef.current = null;
+        }
+      };
+
+      // Restart autoplay on mouse leave
+      const restartOnLeave = () => {
+        if (!autoplayRef.current) {
+          autoplayRef.current = setInterval(autoplay, 3000);
+        }
+      };
+
+      // Add event listeners to pause on user interaction
+      const rootNode = emblaApi.rootNode();
+      if (rootNode) {
+        rootNode.addEventListener('mouseenter', stopOnInteraction);
+        rootNode.addEventListener('mouseleave', restartOnLeave);
+        rootNode.addEventListener('touchstart', stopOnInteraction, { passive: true });
+        rootNode.addEventListener('touchend', restartOnLeave, { passive: true });
+      }
+
+      return () => {
+        if (autoplayRef.current) {
+          clearInterval(autoplayRef.current);
+        }
+        if (rootNode) {
+          rootNode.removeEventListener('mouseenter', stopOnInteraction);
+          rootNode.removeEventListener('mouseleave', restartOnLeave);
+          rootNode.removeEventListener('touchstart', stopOnInteraction);
+          rootNode.removeEventListener('touchend', restartOnLeave);
+        }
+      };
+    }
+  }, [emblaApi]);
+
+  const handleSelectStock = (stock: StockData, index: number) => {
+    setActiveIndex(index);
     if (setFormData) {
       setFormData({
         ticker: stock.ticker,
@@ -109,6 +270,9 @@ const StockCarousel: React.FC = () => {
     }
   };
 
+  // Determine how many slides to show based on screen size
+  const slidesPerView = isMobile ? 1.2 : 4;
+
   return (
     <div className="w-full py-4 sm:py-6">
       <div className="mb-4">
@@ -116,26 +280,36 @@ const StockCarousel: React.FC = () => {
         <p className="text-sm text-gray-500">Click on a stock to use it in your order</p>
       </div>
       
-      <Carousel className="w-full">
-        <CarouselContent className="-ml-2 md:-ml-4">
+      <div className="overflow-hidden" ref={emblaRef}>
+        <div className="flex">
           {popularStocks.map((stock, index) => (
-            <CarouselItem key={stock.ticker} className="pl-2 md:pl-4 sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
-              <StockCard 
-                stock={stock} 
-                isActive={activeIndex === index}
-                onSelect={() => {
-                  setActiveIndex(index);
-                  handleSelectStock(stock);
-                }}
-              />
-            </CarouselItem>
+            <div key={stock.ticker} className="min-w-0 flex-[0_0_80%] sm:flex-[0_0_45%] md:flex-[0_0_30%] lg:flex-[0_0_25%] pl-4">
+              <div 
+                onMouseEnter={() => setHoveredIndex(index)}
+                onMouseLeave={() => setHoveredIndex(null)}
+              >
+                <StockCard 
+                  stock={stock} 
+                  isActive={activeIndex === index}
+                  isHovered={hoveredIndex === index}
+                  onSelect={() => handleSelectStock(stock, index)}
+                />
+              </div>
+            </div>
           ))}
-        </CarouselContent>
-        <div className="flex justify-end gap-2 mt-4">
-          <CarouselPrevious className="relative static left-0 translate-y-0" />
-          <CarouselNext className="relative static right-0 translate-y-0" />
         </div>
-      </Carousel>
+      </div>
+      
+      <div className="flex justify-end gap-2 mt-4">
+        <CarouselPrevious 
+          onClick={() => emblaApi?.scrollPrev()} 
+          className="relative static left-0 translate-y-0" 
+        />
+        <CarouselNext 
+          onClick={() => emblaApi?.scrollNext()} 
+          className="relative static right-0 translate-y-0" 
+        />
+      </div>
     </div>
   );
 };

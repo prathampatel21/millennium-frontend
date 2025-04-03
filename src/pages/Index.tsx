@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
+import GlobeTrades from '../components/GlobeTrades';
 import { BarChart3, TrendingUp, ShieldCheck, ArrowRight } from 'lucide-react';
 
 const Index = () => {
@@ -38,6 +39,17 @@ const Index = () => {
               </Link>
             </div>
           </div>
+        </section>
+        
+        {/* 3D Globe Visualization */}
+        <section className="container mx-auto px-4 md:px-6 py-8 mb-12">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Global Trading Activity</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Watch real-time trades happening around the world
+            </p>
+          </div>
+          <GlobeTrades />
         </section>
         
         <section className="bg-gray-50 py-16">

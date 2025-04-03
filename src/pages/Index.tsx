@@ -3,16 +3,21 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import GlobeTrades from '../components/GlobeTrades';
-import { BarChart3, TrendingUp, ShieldCheck, ArrowRight } from 'lucide-react';
+import { BarChart3, TrendingUp, ShieldCheck, ArrowRight, Earth } from 'lucide-react';
 
 const Index = () => {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-hidden">
       <Header />
       
-      <main className="pt-20 pb-16">
-        <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16">
-          <div className="text-center max-w-3xl mx-auto animate-fade-in">
+      <main className="pt-20 pb-16 relative">
+        {/* Earth Globe Background - Positioned in top right */}
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] -mt-16 -mr-16 opacity-80 pointer-events-none z-0">
+          <GlobeTrades />
+        </div>
+        
+        <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16 relative z-10">
+          <div className="max-w-3xl animate-fade-in">
             <span className="inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">
               Advanced Trading Platform
             </span>
@@ -23,7 +28,7 @@ const Index = () => {
               Experience seamless order management with our intuitive trading platform,
               designed to help you execute trades efficiently and track performance in real-time.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
               <Link
                 to="/create-order"
                 className="btn-primary flex items-center group"
@@ -41,24 +46,19 @@ const Index = () => {
           </div>
         </section>
         
-        {/* 3D Globe Visualization */}
-        <section className="container mx-auto px-4 md:px-6 py-8 mb-12">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Global Trading Activity</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Watch real-time trades happening around the world
-            </p>
-          </div>
-          <GlobeTrades />
-        </section>
-        
-        <section className="bg-gray-50 py-16">
+        {/* Features Section */}
+        <section className="bg-gray-50 py-16 relative z-10">
           <div className="container mx-auto px-4 md:px-6">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">Key Features</h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
                 Our platform offers everything you need for efficient and effective trading operations
               </p>
+            </div>
+            
+            <div className="flex items-center justify-center mb-16">
+              <Earth className="h-6 w-6 text-primary mr-2" />
+              <h3 className="text-xl font-semibold">Global Trading Activity</h3>
             </div>
             
             <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">

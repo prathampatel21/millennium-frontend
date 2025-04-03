@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { OrbitControls, Sphere } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -142,6 +142,9 @@ const Trades = () => {
 // Earth component with texture
 const Earth = () => {
   const earthRef = useRef<THREE.Mesh>(null);
+  const earthTexture = useLoader(THREE.TextureLoader, '/earth-texture.jpg');
+  const bumpTexture = useLoader(THREE.TextureLoader, '/earth-bump.jpg');
+  const cloudsTexture = useLoader(THREE.TextureLoader, '/earth-clouds.png');
   
   useFrame(() => {
     if (earthRef.current) {
@@ -150,25 +153,49 @@ const Earth = () => {
   });
   
   return (
-    <mesh ref={earthRef}>
-      <sphereGeometry args={[1, 64, 64]} />
-      <meshPhongMaterial 
-        color="#2266aa" 
-        emissive="#112244" 
-        specular="#111111"
-        shininess={10}
-        opacity={0.8}
-        transparent={true}
-        wireframe={true}
-      />
-    </mesh>
+    <>
+      {/* Earth sphere */}
+      <mesh ref={earthRef}>
+        <sphereGeometry args={[1, 64, 64]} />
+        <meshPhongMaterial 
+          map={earthTexture}
+          bumpMap={bumpTexture}
+          bumpScale={0.05}
+          specularMap={bumpTexture}
+          specular={new THREE.Color('#111111')}
+          shininess={5}
+        />
+      </mesh>
+      
+      {/* Cloud layer */}
+      <mesh>
+        <sphereGeometry args={[1.01, 32, 32]} />
+        <meshPhongMaterial 
+          map={cloudsTexture}
+          transparent={true}
+          opacity={0.4}
+          depthWrite={false}
+        />
+      </mesh>
+      
+      {/* Atmosphere glow */}
+      <mesh>
+        <sphereGeometry args={[1.015, 32, 32]} />
+        <meshPhongMaterial 
+          color="#0EA5E9"
+          transparent={true}
+          opacity={0.1}
+          depthWrite={false}
+        />
+      </mesh>
+    </>
   );
 };
 
 // Main component
 const GlobeTrades = () => {
   return (
-    <div className="h-[300px] md:h-[400px] lg:h-[500px] w-full rounded-xl overflow-hidden glass">
+    <div className="w-full h-full rounded-xl overflow-hidden">
       <Canvas camera={{ position: [0, 0, 2.5], fov: 45 }}>
         <ambientLight intensity={0.2} />
         <pointLight position={[10, 10, 10]} intensity={1} />
@@ -184,6 +211,8 @@ const GlobeTrades = () => {
           maxDistance={4}
           autoRotate
           autoRotateSpeed={0.5}
+          enableRotate={false}
+          target={[0, 0, 0]}
         />
       </Canvas>
     </div>

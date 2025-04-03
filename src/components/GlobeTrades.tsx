@@ -141,7 +141,7 @@ const Trades = () => {
 
 // Earth component with texture
 const Earth = () => {
-  const earthRef = useRef();
+  const earthRef = useRef<THREE.Mesh>(null);
   
   useFrame(() => {
     if (earthRef.current) {

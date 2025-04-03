@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Carousel, 
@@ -11,7 +10,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
-import { OrderFormData } from '../types/order';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   LineChart, 
@@ -22,6 +20,7 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from 'embla-carousel-autoplay';
 
 type StockData = {
   ticker: string;
@@ -32,11 +31,9 @@ type StockData = {
   chartData: Array<{ day: string; value: number }>;
 };
 
-// Generate mock chart data for each stock
 const generateChartData = (basePrice: number, volatility: number, trend: number) => {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   return days.map((day, index) => {
-    // Create a price that follows a trend but has some randomness
     const noise = (Math.random() - 0.5) * volatility;
     const trendEffect = trend * index / 10;
     const value = basePrice * (1 + noise + trendEffect);
@@ -194,66 +191,20 @@ const StockCarousel: React.FC = () => {
   const navigate = useNavigate();
   const { setFormData } = useOrders();
   const isMobile = useIsMobile();
-  const autoplayRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const autoplay = useRef(
+    Autoplay({ 
+      delay: 3000, 
+      stopOnInteraction: true,
+      rootNode: (emblaRoot) => emblaRoot.parentElement
+    })
+  );
 
-  // Setting up the carousel with autoplay options
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
     loop: true,
     align: "start",
     skipSnaps: false,
-  });
-
-  // Auto-scroll the carousel
-  useEffect(() => {
-    if (emblaApi) {
-      const autoplay = () => {
-        if (!emblaApi.canScrollNext()) {
-          emblaApi.scrollTo(0);
-        } else {
-          emblaApi.scrollNext();
-        }
-      };
-
-      // Start autoplay
-      autoplayRef.current = setInterval(autoplay, 3000);
-
-      // Clear autoplay on mouse enter
-      const stopOnInteraction = () => {
-        if (autoplayRef.current) {
-          clearInterval(autoplayRef.current);
-          autoplayRef.current = null;
-        }
-      };
-
-      // Restart autoplay on mouse leave
-      const restartOnLeave = () => {
-        if (!autoplayRef.current) {
-          autoplayRef.current = setInterval(autoplay, 3000);
-        }
-      };
-
-      // Add event listeners to pause on user interaction
-      const rootNode = emblaApi.rootNode();
-      if (rootNode) {
-        rootNode.addEventListener('mouseenter', stopOnInteraction);
-        rootNode.addEventListener('mouseleave', restartOnLeave);
-        rootNode.addEventListener('touchstart', stopOnInteraction, { passive: true });
-        rootNode.addEventListener('touchend', restartOnLeave, { passive: true });
-      }
-
-      return () => {
-        if (autoplayRef.current) {
-          clearInterval(autoplayRef.current);
-        }
-        if (rootNode) {
-          rootNode.removeEventListener('mouseenter', stopOnInteraction);
-          rootNode.removeEventListener('mouseleave', restartOnLeave);
-          rootNode.removeEventListener('touchstart', stopOnInteraction);
-          rootNode.removeEventListener('touchend', restartOnLeave);
-        }
-      };
-    }
-  }, [emblaApi]);
+  }, [autoplay.current]);
 
   const handleSelectStock = (stock: StockData, index: number) => {
     setActiveIndex(index);
@@ -268,7 +219,6 @@ const StockCarousel: React.FC = () => {
     }
   };
 
-  // Determine how many slides to show based on screen size
   const slidesPerView = isMobile ? 1.2 : 4;
 
   return (
@@ -298,7 +248,6 @@ const StockCarousel: React.FC = () => {
         </div>
       </div>
       
-      {/* Wrapping the carousel controls in a Carousel component for proper context */}
       <div className="flex justify-end gap-2 mt-4">
         <Carousel>
           <CarouselPrevious 

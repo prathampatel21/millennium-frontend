@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
-import GlobeTrades from '../components/GlobeTrades';
 import { BarChart3, TrendingUp, ShieldCheck, ArrowRight, Earth } from 'lucide-react';
 
 const Index = () => {
@@ -11,11 +10,6 @@ const Index = () => {
       <Header />
       
       <main className="pt-20 pb-16 relative">
-        {/* Earth Globe Background - Positioned in top right */}
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] -mt-16 -mr-16 opacity-80 pointer-events-none z-0">
-          <GlobeTrades />
-        </div>
-        
         {/* Hero Section */}
         <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16 relative z-10">
           <div className="max-w-3xl animate-fade-in">

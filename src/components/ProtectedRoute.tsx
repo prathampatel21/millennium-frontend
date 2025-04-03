@@ -32,7 +32,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         
         try {
           // Try to get user balance - this will fail if user doesn't exist
-          const { data, error } = await supabase.rpc('get_user_balance', { p_username: username });
+          const { data, error } = await supabase.rpc('get_user_balance', {
+            p_username: username
+          });
           
           if (error) throw error;
           

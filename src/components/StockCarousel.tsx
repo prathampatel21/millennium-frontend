@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Carousel, 
@@ -12,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
+import { OrderFormData } from '../types/order';
 
 type StockData = {
   ticker: string;
@@ -64,22 +64,19 @@ const StockCard: React.FC<{ stock: StockData; isActive: boolean; onSelect: () =>
       <CardContent className="pb-2">
         <div className="flex flex-col space-y-1">
           <div className="w-full h-12 bg-gray-100 rounded-md relative overflow-hidden">
-            {/* Simple mock chart */}
-            <div className="absolute inset-0 flex items-end">
-              {[...Array(20)].map((_, i) => {
-                const height = 20 + Math.sin(i * 0.5) * 15 + Math.random() * 10;
-                return (
-                  <div 
-                    key={i} 
-                    className={`flex-1 ${isPositive ? 'bg-green-400' : 'bg-red-400'}`}
-                    style={{ 
-                      height: `${height}%`,
-                      opacity: 0.7 + (i / 20) * 0.3
-                    }}
-                  />
-                );
-              })}
-            </div>
+            {[...Array(20)].map((_, i) => {
+              const height = 20 + Math.sin(i * 0.5) * 15 + Math.random() * 10;
+              return (
+                <div 
+                  key={i} 
+                  className={`flex-1 ${isPositive ? 'bg-green-400' : 'bg-red-400'}`}
+                  style={{ 
+                    height: `${height}%`,
+                    opacity: 0.7 + (i / 20) * 0.3
+                  }}
+                />
+              );
+            })}
           </div>
         </div>
       </CardContent>
@@ -101,7 +98,6 @@ const StockCarousel: React.FC = () => {
   const { setFormData } = useOrders();
 
   const handleSelectStock = (stock: StockData) => {
-    // Set the selected stock in the form data (assuming you have this in OrderContext)
     if (setFormData) {
       setFormData({
         ticker: stock.ticker,

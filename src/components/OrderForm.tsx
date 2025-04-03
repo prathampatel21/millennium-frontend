@@ -1,16 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
 import { ArrowRight, AlertCircle, CheckCircle, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
+import { OrderFormData } from '../types/order';
 
 const OrderForm: React.FC = () => {
   const navigate = useNavigate();
   const { addOrder, balance, formData: contextFormData, setFormData: setContextFormData } = useOrders();
   const { getUsername } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<OrderFormData>({
     ticker: '',
     type: 'Buy',
     executionType: 'Market',

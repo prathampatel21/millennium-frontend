@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import axios from 'axios';
+import { OrderFormData } from '../types/order';
 
 const API_BASE_URL = 'http://127.0.0.1:5000';
 
@@ -36,8 +37,8 @@ interface OrderContextType {
   getOrdersByStatus: (status: OrderStatus) => Order[];
   getCompletedOrders: () => Order[];
   refreshUserData: () => Promise<void>;
-  formData?: FormData;
-  setFormData?: (data: FormData) => void;
+  formData?: OrderFormData;
+  setFormData?: (data: OrderFormData) => void;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -56,7 +57,7 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
   const [balance, setBalanceState] = useState<number>(0);
   const [holdings, setHoldings] = useState<StockHolding[]>([]);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<OrderFormData>({
     ticker: '',
     type: 'Buy',
     executionType: 'Market',

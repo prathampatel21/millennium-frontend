@@ -46,7 +46,7 @@ const Header: React.FC = () => {
       case '/auth':
         return 'Authentication';
       default:
-        return 'TradeFlow';
+        return 'FerstTrades';
     }
   };
 
@@ -81,7 +81,7 @@ const Header: React.FC = () => {
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex items-center justify-between h-16 md:h-20">
           <div className="flex items-center space-x-2">
-            <Link to="/" className="text-lg font-bold text-primary">TradeFlow</Link>
+            <Link to="/" className="text-lg font-bold text-primary">FerstTrades</Link>
           </div>
           
           <div className="md:hidden flex items-center">

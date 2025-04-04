@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import { BarChart3, TrendingUp, ShieldCheck, ArrowRight, Earth } from 'lucide-react';
@@ -100,7 +100,8 @@ const Index = () => {
         </section>
       </main>
       
-      <style jsx>{`
+      <style>
+        {`
         .stars-container {
           position: absolute;
           width: 100%;
@@ -147,7 +148,8 @@ const Index = () => {
             transform: translateY(1000px);
           }
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };

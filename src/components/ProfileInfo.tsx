@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, Mail, LogOut, DollarSign } from 'lucide-react';
+import { User, Mail, LogOut, DollarSign, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOrders } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
@@ -12,7 +12,7 @@ const API_BASE_URL = 'http://127.0.0.1:5000';
 
 const ProfileInfo: React.FC = () => {
   const { user, getUsername, signOut } = useAuth();
-  const { balance, setBalance, refreshUserData } = useOrders();
+  const { balance, setBalance, holdings, refreshUserData } = useOrders();
   const [balanceInput, setBalanceInput] = useState(balance.toString());
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -155,6 +155,27 @@ const ProfileInfo: React.FC = () => {
                   Edit
                 </button>
               </div>
+            )}
+          </div>
+        </div>
+        
+        <div>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">Stock Holdings</h3>
+          <div className="glass rounded-xl p-4">
+            {holdings.length > 0 ? (
+              <div className="space-y-3">
+                {holdings.map((holding) => (
+                  <div key={holding.ticker} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                    <div className="flex items-center">
+                      <Briefcase className="h-4 w-4 text-gray-500 mr-2" />
+                      <span className="font-medium">{holding.ticker}</span>
+                    </div>
+                    <span className="text-sm">{holding.quantity} shares</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-2">No stock holdings yet</p>
             )}
           </div>
         </div>

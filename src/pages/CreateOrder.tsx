@@ -13,7 +13,7 @@ const CreateOrder = () => {
       
       <main className="pt-20 pb-16">
         <div className="container mx-auto px-4 md:px-6 py-8 md:py-12">
-          <div className="mx-auto">
+          <div className="max-w-4xl mx-auto">
             <div className="mb-6">
               <Link
                 to="/"
@@ -38,9 +38,7 @@ const CreateOrder = () => {
               <StockCarousel />
             </div>
             
-            <div className="max-w-4xl mx-auto">
-              <OrderForm />
-            </div>
+            <OrderForm />
           </div>
         </div>
       </main>

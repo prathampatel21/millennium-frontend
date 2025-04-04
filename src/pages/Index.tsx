@@ -3,11 +3,24 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import { BarChart3, TrendingUp, ShieldCheck, ArrowRight, Earth } from 'lucide-react';
+import ParticleAnimation from 'react-particle-animation';
 
 const Index = () => {
   return (
     <div className="min-h-screen overflow-hidden flex flex-col items-center">
       <Header />
+      
+      {/* Particle Animation Background */}
+      <div className="absolute inset-0 z-0">
+        <ParticleAnimation
+          style={{ height: '100vh' }}
+          background={{ r: 245, g: 247, b: 250, a: 1 }}
+          particleCount={75}
+          particleSpeed={0.3}
+          interactive={true}
+          color={{ r: 59, g: 130, b: 246, a: 255 }}
+        />
+      </div>
       
       <main className="pt-20 pb-16 relative w-full">
         {/* Hero Section */}
@@ -42,7 +55,7 @@ const Index = () => {
         </section>
         
         {/* Features Section */}
-        <section className="bg-gray-50 py-16 relative z-10 w-full">
+        <section className="bg-gray-50/80 py-16 relative z-10 w-full">
           <div className="container mx-auto px-4 md:px-6">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">Key Features</h2>

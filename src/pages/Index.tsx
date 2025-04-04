@@ -11,10 +11,10 @@ const Index = () => {
       
       {/* Custom background with CSS instead of react-particle-animation */}
       <div className="absolute inset-0 z-0 bg-gradient-to-br from-blue-50 to-gray-100">
-        <div className="stars-container">
-          <div className="stars"></div>
-          <div className="stars"></div>
-          <div className="stars"></div>
+        <div className="constellation-container">
+          <div className="constellation"></div>
+          <div className="constellation"></div>
+          <div className="constellation"></div>
         </div>
       </div>
       
@@ -102,51 +102,75 @@ const Index = () => {
       
       <style>
         {`
-        .stars-container {
+        .constellation-container {
           position: absolute;
           width: 100%;
           height: 100%;
           overflow: hidden;
         }
         
-        .stars {
+        .constellation {
           position: absolute;
           top: 0;
           left: 0;
           width: 100%;
           height: 100%;
           background-image: 
-            radial-gradient(2px 2px at 20px 30px, #3b82f6, rgba(0,0,0,0)),
-            radial-gradient(2px 2px at 40px 70px, #3b82f6, rgba(0,0,0,0)),
-            radial-gradient(2px 2px at 50px 160px, #3b82f6, rgba(0,0,0,0)),
-            radial-gradient(2px 2px at 90px 40px, #3b82f6, rgba(0,0,0,0)),
-            radial-gradient(2px 2px at 130px 80px, #3b82f6, rgba(0,0,0,0)),
-            radial-gradient(2px 2px at 160px 120px, #3b82f6, rgba(0,0,0,0));
+            radial-gradient(3px 3px at 20px 30px, #3b82f6, rgba(0,0,0,0)),
+            radial-gradient(3px 3px at 40px 70px, #3b82f6, rgba(0,0,0,0)),
+            radial-gradient(3px 3px at 50px 160px, #3b82f6, rgba(0,0,0,0)),
+            radial-gradient(3px 3px at 90px 40px, #3b82f6, rgba(0,0,0,0)),
+            radial-gradient(3px 3px at 130px 80px, #3b82f6, rgba(0,0,0,0)),
+            radial-gradient(3px 3px at 160px 120px, #3b82f6, rgba(0,0,0,0)),
+            radial-gradient(3px 3px at 200px 180px, #3b82f6, rgba(0,0,0,0)),
+            radial-gradient(3px 3px at 250px 230px, #3b82f6, rgba(0,0,0,0)),
+            radial-gradient(3px 3px at 300px 280px, #3b82f6, rgba(0,0,0,0));
           background-repeat: repeat;
-          background-size: 200px 200px;
-          animation: animateStars 100s linear infinite;
-          opacity: 0.3;
-        }
-        
-        .stars:nth-child(2) {
-          background-size: 300px 300px;
-          animation-duration: 150s;
-          animation-delay: -25s;
-        }
-        
-        .stars:nth-child(3) {
           background-size: 400px 400px;
-          animation-duration: 200s;
-          animation-delay: -50s;
+          animation: animateConstellation 150s linear infinite;
+          opacity: 0.7;
         }
         
-        @keyframes animateStars {
+        .constellation:nth-child(2) {
+          background-size: 500px 500px;
+          animation-duration: 180s;
+          animation-delay: -25s;
+          opacity: 0.6;
+        }
+        
+        .constellation:nth-child(3) {
+          background-size: 600px 600px;
+          animation-duration: 210s;
+          animation-delay: -50s;
+          opacity: 0.5;
+        }
+        
+        @keyframes animateConstellation {
           from {
             transform: translateY(0);
           }
           to {
             transform: translateY(1000px);
           }
+        }
+        
+        /* Add constellation lines effect */
+        .constellation:after {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-image: 
+            linear-gradient(to right, transparent 49%, #3b82f680 50%, transparent 51%),
+            linear-gradient(to bottom, transparent 49%, #3b82f680 50%, transparent 51%),
+            linear-gradient(135deg, transparent 49%, #3b82f680 50%, transparent 51%),
+            linear-gradient(45deg, transparent 49%, #3b82f680 50%, transparent 51%);
+          background-size: 60px 60px;
+          background-repeat: repeat;
+          opacity: 0.3;
+          mix-blend-mode: screen;
         }
         `}
       </style>

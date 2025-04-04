@@ -3,9 +3,18 @@ import React, { useEffect } from 'react';
 import Header from '../components/Header';
 import ProfileInfo from '../components/ProfileInfo';
 import { useOrders } from '../context/OrderContext';
+import { Briefcase } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const Profile = () => {
-  const { refreshUserData } = useOrders();
+  const { refreshUserData, holdings } = useOrders();
 
   // Ensure we get the latest data when component mounts
   useEffect(() => {
@@ -25,8 +34,44 @@ const Profile = () => {
             </p>
           </div>
           
-          <div className="max-w-4xl mx-auto">
-            <ProfileInfo />
+          <div className="grid md:grid-cols-[1fr_2fr] gap-8">
+            <div>
+              <ProfileInfo />
+            </div>
+            
+            <div>
+              <div className="glass rounded-xl p-6 h-full">
+                <h2 className="text-xl font-semibold text-gray-800 mb-6">
+                  <span className="flex items-center">
+                    <Briefcase className="h-5 w-5 text-primary mr-2" />
+                    Stock Holdings
+                  </span>
+                </h2>
+                
+                {holdings.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Stock</TableHead>
+                        <TableHead className="text-right">Quantity</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {holdings.map((holding) => (
+                        <TableRow key={holding.ticker}>
+                          <TableCell className="font-medium">{holding.ticker}</TableCell>
+                          <TableCell className="text-right">{holding.quantity} shares</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500">No stock holdings yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </main>

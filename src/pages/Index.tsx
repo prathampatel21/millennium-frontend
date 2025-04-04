@@ -9,15 +9,6 @@ const Index = () => {
     <div className="min-h-screen overflow-hidden flex flex-col items-center">
       <Header />
       
-      {/* Custom background with CSS instead of react-particle-animation */}
-      <div className="absolute inset-0 z-0 bg-gradient-to-br from-blue-50 to-gray-100">
-        <div className="stars-container">
-          <div className="stars"></div>
-          <div className="stars"></div>
-          <div className="stars"></div>
-        </div>
-      </div>
-      
       <main className="pt-20 pb-16 relative w-full">
         {/* Hero Section */}
         <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16 relative z-10 flex justify-center">
@@ -51,7 +42,7 @@ const Index = () => {
         </section>
         
         {/* Features Section */}
-        <section className="bg-gray-50/80 py-16 relative z-10 w-full">
+        <section className="bg-gray-50 py-16 relative z-10 w-full">
           <div className="container mx-auto px-4 md:px-6">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">Key Features</h2>
@@ -99,57 +90,6 @@ const Index = () => {
           </div>
         </section>
       </main>
-      
-      <style>
-        {`
-        .stars-container {
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          overflow: hidden;
-        }
-        
-        .stars {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background-image: 
-            radial-gradient(2px 2px at 20px 30px, #3b82f6, rgba(0,0,0,0)),
-            radial-gradient(2px 2px at 40px 70px, #3b82f6, rgba(0,0,0,0)),
-            radial-gradient(2px 2px at 50px 160px, #3b82f6, rgba(0,0,0,0)),
-            radial-gradient(2px 2px at 90px 40px, #3b82f6, rgba(0,0,0,0)),
-            radial-gradient(2px 2px at 130px 80px, #3b82f6, rgba(0,0,0,0)),
-            radial-gradient(2px 2px at 160px 120px, #3b82f6, rgba(0,0,0,0));
-          background-repeat: repeat;
-          background-size: 200px 200px;
-          animation: animateStars 100s linear infinite;
-          opacity: 0.3;
-        }
-        
-        .stars:nth-child(2) {
-          background-size: 300px 300px;
-          animation-duration: 150s;
-          animation-delay: -25s;
-        }
-        
-        .stars:nth-child(3) {
-          background-size: 400px 400px;
-          animation-duration: 200s;
-          animation-delay: -50s;
-        }
-        
-        @keyframes animateStars {
-          from {
-            transform: translateY(0);
-          }
-          to {
-            transform: translateY(1000px);
-          }
-        }
-        `}
-      </style>
     </div>
   );
 };

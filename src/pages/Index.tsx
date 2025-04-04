@@ -1,181 +1,21 @@
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import { BarChart3, TrendingUp, ShieldCheck, ArrowRight, Earth } from 'lucide-react';
 
 const Index = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set canvas dimensions
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-
-    // Initial resize
-    resizeCanvas();
-
-    // Update on window resize
-    window.addEventListener('resize', resizeCanvas);
-
-    // Particle configuration
-    const particlesArray: Particle[] = [];
-    const numberOfParticles = 80;
-    const maxDistance = 100;
-    const mouseRadius = 100;
-
-    // Mouse position tracking
-    let mouse = {
-      x: null as number | null,
-      y: null as number | null,
-    };
-
-    window.addEventListener('mousemove', (event) => {
-      mouse.x = event.x;
-      mouse.y = event.y;
-    });
-
-    window.addEventListener('mouseout', () => {
-      mouse.x = null;
-      mouse.y = null;
-    });
-
-    // Particle class
-    class Particle {
-      x: number;
-      y: number;
-      size: number;
-      baseX: number;
-      baseY: number;
-      density: number;
-      color: string;
-
-      constructor(x: number, y: number) {
-        this.x = x;
-        this.y = y;
-        this.size = Math.random() * 2 + 1;
-        this.baseX = x;
-        this.baseY = y;
-        this.density = (Math.random() * 30) + 1;
-        this.color = '#3b82f6';
-      }
-
-      draw() {
-        if (!ctx) return;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      update() {
-        // Mouse interaction
-        if (mouse.x != null && mouse.y != null) {
-          const dx = mouse.x - this.x;
-          const dy = mouse.y - this.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          
-          if (distance < mouseRadius) {
-            const forceDirectionX = dx / distance;
-            const forceDirectionY = dy / distance;
-            const maxDistance = mouseRadius;
-            const force = (maxDistance - distance) / maxDistance;
-            const directionX = forceDirectionX * force * this.density;
-            const directionY = forceDirectionY * force * this.density;
-            
-            this.x -= directionX;
-            this.y -= directionY;
-          }
-        }
-
-        // Move particles back to original position
-        let dx = this.baseX - this.x;
-        let dy = this.baseY - this.y;
-        this.x += dx * 0.05;
-        this.y += dy * 0.05;
-
-        // Add some natural movement
-        this.x += Math.random() * 0.5 - 0.25;
-        this.y += Math.random() * 0.5 - 0.25;
-
-        this.draw();
-      }
-    }
-
-    // Create particles
-    function init() {
-      particlesArray.length = 0;
-      for (let i = 0; i < numberOfParticles; i++) {
-        const x = Math.random() * canvas.width;
-        const y = Math.random() * canvas.height;
-        particlesArray.push(new Particle(x, y));
-      }
-    }
-
-    // Connect nearby particles with lines
-    function connect() {
-      for (let a = 0; a < particlesArray.length; a++) {
-        for (let b = a; b < particlesArray.length; b++) {
-          const dx = particlesArray[a].x - particlesArray[b].x;
-          const dy = particlesArray[a].y - particlesArray[b].y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-
-          if (distance < maxDistance) {
-            if (!ctx) return;
-            ctx.strokeStyle = `rgba(59, 130, 246, ${(maxDistance - distance) / maxDistance * 0.8})`;
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-            ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
-            ctx.stroke();
-          }
-        }
-      }
-    }
-
-    // Animation function
-    function animate() {
-      if (!ctx || !canvas) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      for (let i = 0; i < particlesArray.length; i++) {
-        particlesArray[i].update();
-      }
-      connect();
-      requestAnimationFrame(animate);
-    }
-
-    // Initialize and start animation
-    init();
-    animate();
-
-    // Cleanup event listeners on component unmount
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      window.removeEventListener('mousemove', () => {});
-      window.removeEventListener('mouseout', () => {});
-    };
-  }, []);
-
   return (
     <div className="min-h-screen overflow-hidden flex flex-col items-center">
       <Header />
       
-      {/* Dynamic constellation background */}
+      {/* Custom background with CSS instead of react-particle-animation */}
       <div className="absolute inset-0 z-0 bg-gradient-to-br from-blue-50 to-gray-100">
-        <canvas 
-          ref={canvasRef} 
-          className="absolute top-0 left-0 w-full h-full"
-        />
+        <div className="stars-container">
+          <div className="stars"></div>
+          <div className="stars"></div>
+          <div className="stars"></div>
+        </div>
       </div>
       
       <main className="pt-20 pb-16 relative w-full">
@@ -259,6 +99,57 @@ const Index = () => {
           </div>
         </section>
       </main>
+      
+      <style>
+        {`
+        .stars-container {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+        }
+        
+        .stars {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-image: 
+            radial-gradient(2px 2px at 20px 30px, #3b82f6, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 40px 70px, #3b82f6, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 50px 160px, #3b82f6, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 90px 40px, #3b82f6, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 130px 80px, #3b82f6, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 160px 120px, #3b82f6, rgba(0,0,0,0));
+          background-repeat: repeat;
+          background-size: 200px 200px;
+          animation: animateStars 100s linear infinite;
+          opacity: 0.3;
+        }
+        
+        .stars:nth-child(2) {
+          background-size: 300px 300px;
+          animation-duration: 150s;
+          animation-delay: -25s;
+        }
+        
+        .stars:nth-child(3) {
+          background-size: 400px 400px;
+          animation-duration: 200s;
+          animation-delay: -50s;
+        }
+        
+        @keyframes animateStars {
+          from {
+            transform: translateY(0);
+          }
+          to {
+            transform: translateY(1000px);
+          }
+        }
+        `}
+      </style>
     </div>
   );
 };

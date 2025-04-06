@@ -77,6 +77,7 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
       const balanceResponse = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
       
       if (balanceResponse.data) {
+        console.log('Balance response payload:', balanceResponse.data);
         const balanceValue = parseFloat(balanceResponse.data.balance);
         
         if (!isNaN(balanceValue)) {

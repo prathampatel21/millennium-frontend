@@ -21,8 +21,11 @@ def convert_decimal_to_float(data):
     if isinstance(data, list):
         return [convert_decimal_to_float(item) for item in data]
     elif isinstance(data, dict):
-        return {key: float(value) if isinstance(value, Decimal) else value for key, value in data.items()}
-    return data
+        return {key: convert_decimal_to_float(value) for key, value in data.items()}
+    elif isinstance(data, Decimal):
+        return float(data)
+    else:
+        return data
 
 # User routes
 @app.route('/users', methods=['POST'])
@@ -74,7 +77,13 @@ def get_balance(username):
         if not response.data:
             return jsonify({"error": "User not found"}), 404
             
-        balance = response.data
+        # If Supabase returned a list with 1 dict:
+        raw_balance = response.data
+        if isinstance(raw_balance, list) and len(raw_balance) > 0:
+            balance = raw_balance[0].get('balance')
+        else:
+            balance = None
+        
         return jsonify({"username": username, "balance": convert_decimal_to_float(balance)}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

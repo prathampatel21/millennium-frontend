@@ -2,12 +2,10 @@
 import React, { useEffect } from 'react';
 import Header from '../components/Header';
 import ProfileInfo from '../components/ProfileInfo';
-import OrderTable from '../components/OrderTable';
 import { useOrders } from '../context/OrderContext';
 
 const Profile = () => {
-  const { getCompletedOrders, refreshUserData } = useOrders();
-  const completedOrders = getCompletedOrders();
+  const { refreshUserData } = useOrders();
 
   // Ensure we get the latest data when component mounts
   useEffect(() => {
@@ -23,31 +21,12 @@ const Profile = () => {
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
             <p className="text-gray-600 mt-2">
-              Manage your account and view your trading history
+              Manage your account and view your trading information
             </p>
           </div>
           
-          <div className="grid md:grid-cols-[1fr_2fr] gap-8">
-            <div>
-              <ProfileInfo />
-            </div>
-            
-            <div>
-              <div className="glass rounded-xl p-6 h-full">
-                <h2 className="text-xl font-semibold text-gray-800 mb-6">Recent Completed Orders</h2>
-                
-                {completedOrders.length > 0 ? (
-                  <OrderTable 
-                    orders={completedOrders.slice(0, 5)} 
-                    showFilters={false} 
-                  />
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500">No completed orders yet</p>
-                  </div>
-                )}
-              </div>
-            </div>
+          <div className="max-w-4xl mx-auto">
+            <ProfileInfo />
           </div>
         </div>
       </main>

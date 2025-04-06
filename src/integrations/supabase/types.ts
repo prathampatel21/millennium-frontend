@@ -343,7 +343,9 @@ export type Database = {
         Args: {
           p_username: string
         }
-        Returns: number
+        Returns: {
+          balance: number
+        }[]
       }
       update_user_balance: {
         Args: {

@@ -9,10 +9,10 @@ const Index = () => {
     <div className="min-h-screen overflow-hidden">
       <Header />
       
-      <main className="pt-20 pb-16 relative">
+      <main className="pt-20 pb-16 relative flex flex-col items-center">
         {/* Hero Section */}
-        <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16 relative z-10">
-          <div className="max-w-3xl animate-fade-in">
+        <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16 relative z-10 text-center">
+          <div className="max-w-3xl mx-auto animate-fade-in">
             <span className="inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">
               Advanced Trading Platform
             </span>
@@ -23,7 +23,7 @@ const Index = () => {
               Experience seamless order management with our intuitive trading platform,
               designed to help you execute trades efficiently and track performance in real-time.
             </p>
-            <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 to="/create-order"
                 className="btn-primary flex items-center group"
@@ -42,7 +42,7 @@ const Index = () => {
         </section>
         
         {/* Features Section */}
-        <section className="bg-gray-50 py-16 relative z-10">
+        <section className="bg-gray-50 py-16 relative z-10 w-full">
           <div className="container mx-auto px-4 md:px-6">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">Key Features</h2>

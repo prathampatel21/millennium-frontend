@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
@@ -215,11 +216,14 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
       
+      // Calculate total amount from price per share * number of shares
+      const totalAmount = newOrder.price * newOrder.size;
+      
       const orderResponse = await axios.post(`${API_BASE_URL}/orders/parent`, {
         ticker: newOrder.ticker,
         shares: newOrder.size,
         type: newOrder.type.toLowerCase(),
-        amount: newOrder.price * newOrder.size,
+        amount: totalAmount,
         username: username
       });
       

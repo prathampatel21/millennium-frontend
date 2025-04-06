@@ -219,11 +219,20 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
       // Calculate total amount from price per share * number of shares
       const totalAmount = newOrder.price * newOrder.size;
       
+      console.log('Creating order with:', {
+        ticker: newOrder.ticker,
+        shares: newOrder.size,
+        price: newOrder.price,
+        totalAmount: totalAmount,
+        type: newOrder.type.toLowerCase()
+      });
+      
       const orderResponse = await axios.post(`${API_BASE_URL}/orders/parent`, {
         ticker: newOrder.ticker,
         shares: newOrder.size,
         type: newOrder.type.toLowerCase(),
         amount: totalAmount,
+        price: newOrder.price, // Make sure price per share is passed
         username: username
       });
       
@@ -310,3 +319,4 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     </OrderContext.Provider>
   );
 };
+

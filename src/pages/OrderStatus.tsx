@@ -39,12 +39,14 @@ const OrderStatus = () => {
             ticker: order.ticker || '',
             type: (order.order_type === 'buy' ? 'Buy' : 'Sell'),
             executionType: 'Market',
-            price: parseFloat(order.price) || 0,
-            size: parseInt(order.shares) || 0,
+            // Ensure we're correctly parsing numeric values
+            price: order.price ? parseFloat(order.price) : 0,
+            size: order.shares ? parseInt(order.shares) : 0,
             status: order.status === 'completed' ? 'Completed' : (order.status === 'processing' ? 'Processing' : 'In-Progress'),
             timestamp: new Date(order.created_at || Date.now()),
           }));
           
+          console.log('Mapped orders with price and size:', mappedOrders);
           setOrders(mappedOrders);
         }
       } catch (error) {
@@ -57,6 +59,15 @@ const OrderStatus = () => {
     
     fetchOrderStatus();
     refreshUserData();
+
+    // Set up a polling interval to refresh the order status
+    const intervalId = setInterval(() => {
+      fetchOrderStatus();
+    }, 30000); // Poll every 30 seconds
+
+    return () => {
+      clearInterval(intervalId);
+    };
   }, [getUsername, refreshUserData]);
   
   const processingOrders = orders.filter(order => order.status === 'Processing');
@@ -144,3 +155,4 @@ const OrderStatus = () => {
 };
 
 export default OrderStatus;
+

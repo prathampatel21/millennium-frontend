@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
@@ -77,13 +76,19 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
       const balanceResponse = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
       
       if (balanceResponse.data) {
-        const balanceValue = parseFloat(balanceResponse.data.balance);
+        let balanceValue: number;
+        
+        if (typeof balanceResponse.data === 'object' && balanceResponse.data !== null) {
+          balanceValue = parseFloat(balanceResponse.data.balance);
+        } else {
+          balanceValue = parseFloat(String(balanceResponse.data));
+        }
         
         if (!isNaN(balanceValue)) {
           console.log('Retrieved user balance:', balanceValue);
           setBalanceState(balanceValue);
         } else {
-          console.error('Invalid balance value received:', balanceResponse.data.balance);
+          console.error('Invalid balance value received:', balanceResponse.data);
         }
       }
     } catch (error) {
@@ -118,10 +123,10 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
           ticker: order.ticker || '',
           type: (order.order_type === 'buy' ? 'Buy' : 'Sell') as OrderType,
           executionType: 'Market' as OrderExecutionType,
-          price: order.price || 0,
-          size: order.shares || 0,
+          price: parseFloat(order.price) || 0,
+          size: parseInt(order.shares) || 0,
           status: order.status === 'completed' ? 'Completed' : 'In-Progress' as OrderStatus,
-          timestamp: new Date(order.created_at || Date.now()),
+          timestamp: new Date(order.created_at || order.order_time || Date.now()),
         }));
         
         setOrders(mappedOrders);
@@ -129,7 +134,11 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
       
       const portfolioResponse = await axios.get(`${API_BASE_URL}/users/${username}/portfolio`);
       
-      if (portfolioResponse.data?.user_summary?.holdings && Array.isArray(portfolioResponse.data.user_summary.holdings)) {
+      if (portfolioResponse.data && 
+          portfolioResponse.data.user_summary && 
+          portfolioResponse.data.user_summary.holdings && 
+          Array.isArray(portfolioResponse.data.user_summary.holdings)) {
+        
         console.log('Retrieved user holdings:', portfolioResponse.data.user_summary.holdings);
         
         const mappedHoldings = portfolioResponse.data.user_summary.holdings.map((holding: any) => ({
@@ -138,6 +147,9 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         }));
         
         setHoldings(mappedHoldings);
+      } else {
+        console.log('No holdings found in the response or invalid structure:', portfolioResponse.data);
+        setHoldings([]);
       }
       
     } catch (error) {
@@ -216,7 +228,6 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
       
-      // Calculate total amount from price per share * number of shares
       const totalAmount = newOrder.price * newOrder.size;
       
       const orderResponse = await axios.post(`${API_BASE_URL}/orders/parent`, {

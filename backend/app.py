@@ -1,4 +1,3 @@
-
 from decimal import Decimal
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -21,7 +20,9 @@ def convert_decimal_to_float(data):
     if isinstance(data, list):
         return [convert_decimal_to_float(item) for item in data]
     elif isinstance(data, dict):
-        return {key: float(value) if isinstance(value, Decimal) else value for key, value in data.items()}
+        return {key: convert_decimal_to_float(value) for key, value in data.items()}
+    elif isinstance(data, Decimal):
+        return float(data)
     return data
 
 # User routes
@@ -60,7 +61,7 @@ def update_balance(username):
             'new_balance': new_balance
         }).execute()
         
-        return jsonify({"username": username, "new_balance": convert_decimal_to_float(new_balance)}), 200
+        return jsonify({"username": username, "balance": convert_decimal_to_float(new_balance)}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -71,11 +72,11 @@ def get_balance(username):
         # Call the RPC function to get user balance
         response = supabase.rpc('get_user_balance', {'p_username': username}).execute()
         
-        if not response.data:
+        if response.data is None:
             return jsonify({"error": "User not found"}), 404
             
-        balance = response.data
-        return jsonify({"username": username, "balance": convert_decimal_to_float(balance)}), 200
+        balance = convert_decimal_to_float(response.data)
+        return jsonify({"username": username, "balance": balance}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

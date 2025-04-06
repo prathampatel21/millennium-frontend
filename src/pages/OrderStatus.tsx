@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import Header from '../components/Header';
 import OrderTable from '../components/OrderTable';
@@ -17,47 +16,70 @@ const OrderStatus = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Fetch order status data when component mounts
-  useEffect(() => {
-    const fetchOrderStatus = async () => {
-      try {
-        const username = getUsername();
-        if (!username) {
-          toast.error('User information not available');
-          setLoading(false);
-          return;
-        }
+  const fetchOrderStatus = useCallback(async () => {
+    try {
+      const username = getUsername();
+      if (!username) {
+        toast.error('User information not available');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Fetching order status for user:', username);
+      const response = await axios.get(`${API_BASE_URL}/users/${username}/orders/status`);
+      
+      if (response.data && Array.isArray(response.data.orders)) {
+        console.log('Retrieved user order status:', response.data.orders);
         
-        console.log('Fetching order status for user:', username);
-        const response = await axios.get(`${API_BASE_URL}/users/${username}/orders/status`);
-        
-        if (response.data && Array.isArray(response.data.orders)) {
-          console.log('Retrieved user order status:', response.data.orders);
+        const mappedOrders = response.data.orders.map((order: any) => {
+          const orderId = order.order_id?.toString() || order.parent_order_id?.toString() || '';
+          let price = 0;
+          let shares = 0;
           
-          const mappedOrders = response.data.orders.map((order: any) => ({
-            id: order.order_id?.toString() || '',
+          if (order.price !== undefined && order.price !== null) {
+            price = typeof order.price === 'number' ? order.price : parseFloat(String(order.price)) || 0;
+          } else if (order.amount !== undefined && order.amount !== null && order.shares && order.shares > 0) {
+            price = typeof order.amount === 'number' 
+              ? order.amount / order.shares 
+              : parseFloat(String(order.amount)) / parseInt(String(order.shares)) || 0;
+          }
+          
+          if (order.shares !== undefined && order.shares !== null) {
+            shares = typeof order.shares === 'number' ? order.shares : parseInt(String(order.shares)) || 0;
+          }
+          
+          return {
+            id: orderId,
             ticker: order.ticker || '',
             type: (order.order_type === 'buy' ? 'Buy' : 'Sell'),
             executionType: 'Market',
-            price: parseFloat(order.price) || 0,
-            size: parseInt(order.shares) || 0,
+            price: price,
+            size: shares,
             status: order.status === 'completed' ? 'Completed' : (order.status === 'processing' ? 'Processing' : 'In-Progress'),
-            timestamp: new Date(order.created_at || Date.now()),
-          }));
-          
-          setOrders(mappedOrders);
-        }
-      } catch (error) {
-        console.error('Error fetching order status:', error);
-        toast.error('Failed to load order status data');
-      } finally {
-        setLoading(false);
+            timestamp: new Date(order.created_at || order.order_time || Date.now()),
+          };
+        });
+        
+        setOrders(mappedOrders);
       }
-    };
-    
+    } catch (error) {
+      console.error('Error fetching order status:', error);
+      toast.error('Failed to load order status data');
+    } finally {
+      setLoading(false);
+    }
+  }, [getUsername]);
+  
+  useEffect(() => {
     fetchOrderStatus();
     refreshUserData();
-  }, [getUsername, refreshUserData]);
+    
+    const intervalId = setInterval(() => {
+      fetchOrderStatus();
+    }, 10000);
+    
+    return () => clearInterval(intervalId);
+  }, [getUsername, refreshUserData, fetchOrderStatus]);
   
   const processingOrders = orders.filter(order => order.status === 'Processing');
   const inProgressOrders = orders.filter(order => order.status === 'In-Progress');
@@ -135,7 +157,11 @@ const OrderStatus = () => {
           </div>
           
           <div className="glass rounded-xl p-6 mb-10">
-            <OrderTable orders={orders} title="All Orders" />
+            <OrderTable 
+              orders={orders} 
+              title="All Orders" 
+              key="all-orders" 
+            />
           </div>
         </div>
       </main>

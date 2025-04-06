@@ -20,25 +20,12 @@ const OrderForm: React.FC = () => {
     size: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [totalCost, setTotalCost] = useState<number>(0);
 
   useEffect(() => {
     if (contextFormData && setContextFormData) {
       setFormData(contextFormData);
     }
   }, [contextFormData]);
-
-  useEffect(() => {
-    // Calculate total cost whenever price or size changes
-    const priceValue = Number(formData.price);
-    const sizeValue = Number(formData.size);
-    
-    if (!isNaN(priceValue) && !isNaN(sizeValue) && priceValue > 0 && sizeValue > 0) {
-      setTotalCost(priceValue * sizeValue);
-    } else {
-      setTotalCost(0);
-    }
-  }, [formData.price, formData.size]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -47,24 +34,16 @@ const OrderForm: React.FC = () => {
       newErrors.ticker = 'Ticker is required';
     }
     
-    if (!formData.price) {
-      newErrors.price = 'Price per share is required';
-    } else if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
-      newErrors.price = 'Price per share must be a positive number';
+    if (formData.executionType === 'Limit' && !formData.price) {
+      newErrors.price = 'Limit price is required';
+    } else if (formData.executionType === 'Limit' && (isNaN(Number(formData.price)) || Number(formData.price) <= 0)) {
+      newErrors.price = 'Price must be a positive number';
     }
     
     if (!formData.size) {
       newErrors.size = 'Order size is required';
     } else if (isNaN(Number(formData.size)) || Number(formData.size) <= 0) {
       newErrors.size = 'Order size must be a positive number';
-    }
-    
-    // Check if total cost exceeds balance for Buy orders
-    if (formData.type === 'Buy') {
-      const cost = Number(formData.price) * Number(formData.size);
-      if (!isNaN(cost) && cost > balance) {
-        newErrors.balance = `Insufficient funds. This order costs $${cost.toFixed(2)} but your balance is $${balance.toFixed(2)}`;
-      }
     }
     
     setErrors(newErrors);
@@ -94,7 +73,21 @@ const OrderForm: React.FC = () => {
     
     if (!validateForm()) return;
     
-    const orderPrice = Number(formData.price);
+    let orderPrice = Number(formData.price);
+    if (formData.executionType === 'Market') {
+      const marketPrices: Record<string, number> = {
+        'AAPL': 174.79,
+        'MSFT': 416.38,
+        'NVDA': 950.02,
+        'AMZN': 178.25,
+        'TSLA': 177.56,
+        'GOOG': 170.63,
+        'META': 480.28,
+      };
+      
+      const ticker = formData.ticker.toUpperCase();
+      orderPrice = marketPrices[ticker] || (100 + Math.random() * 200);
+    }
     
     setIsSubmitting(true);
     
@@ -196,33 +189,57 @@ const OrderForm: React.FC = () => {
         </div>
         
         <div className="space-y-1">
-          <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-            Price per Share (USD)
+          <label htmlFor="executionType" className="block text-sm font-medium text-gray-700">
+            Execution Type
           </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <span className="text-gray-500">$</span>
-            </div>
-            <input
-              id="price"
-              name="price"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={formData.price}
-              onChange={handleChange}
-              className={`form-input pl-8 ${errors.price ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : ''}`}
-              disabled={isSubmitting}
-            />
-          </div>
-          {errors.price && (
-            <p className="text-red-500 text-xs mt-1 flex items-center">
-              <AlertCircle className="w-3 h-3 mr-1" />
-              {errors.price}
-            </p>
-          )}
+          <select
+            id="executionType"
+            name="executionType"
+            value={formData.executionType}
+            onChange={handleChange}
+            className="form-input"
+            disabled={isSubmitting}
+          >
+            <option value="Market">Market Order</option>
+            <option value="Limit">Limit Order</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            {formData.executionType === 'Market' 
+              ? 'Market orders execute immediately at the current market price' 
+              : 'Limit orders execute only at the specified price or better'}
+          </p>
         </div>
+        
+        {formData.executionType === 'Limit' && (
+          <div className="space-y-1">
+            <label htmlFor="price" className="block text-sm font-medium text-gray-700">
+              Limit Price (USD)
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <span className="text-gray-500">$</span>
+              </div>
+              <input
+                id="price"
+                name="price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={formData.price}
+                onChange={handleChange}
+                className={`form-input pl-8 ${errors.price ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : ''}`}
+                disabled={isSubmitting}
+              />
+            </div>
+            {errors.price && (
+              <p className="text-red-500 text-xs mt-1 flex items-center">
+                <AlertCircle className="w-3 h-3 mr-1" />
+                {errors.price}
+              </p>
+            )}
+          </div>
+        )}
         
         <div className="space-y-1">
           <label htmlFor="size" className="block text-sm font-medium text-gray-700">
@@ -247,25 +264,6 @@ const OrderForm: React.FC = () => {
             </p>
           )}
         </div>
-        
-        {formData.price && formData.size && (
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <div className="text-sm font-medium text-gray-800">Order Summary</div>
-            <div className="flex justify-between text-sm mt-1">
-              <span className="text-gray-600">Total Cost:</span>
-              <span className="font-medium">${totalCost.toFixed(2)}</span>
-            </div>
-          </div>
-        )}
-        
-        {errors.balance && (
-          <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-            <p className="text-red-600 text-sm flex items-center">
-              <AlertCircle className="w-4 h-4 mr-2" />
-              {errors.balance}
-            </p>
-          </div>
-        )}
         
         <div className="pt-4">
           <button

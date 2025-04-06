@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
@@ -76,19 +77,30 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
       const balanceResponse = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
       
       if (balanceResponse.data) {
-        const balanceValue = parseFloat(balanceResponse.data.balance);
-        
-        if (!isNaN(balanceValue)) {
+        // Check if balance property exists and is a number
+        if (typeof balanceResponse.data.balance === 'number' || 
+            typeof balanceResponse.data.balance === 'string' && !isNaN(parseFloat(balanceResponse.data.balance))) {
+          const balanceValue = parseFloat(balanceResponse.data.balance);
           console.log('Retrieved user balance:', balanceValue);
           setBalanceState(balanceValue);
         } else {
-          console.error('Invalid balance value received:', balanceResponse.data.balance);
+          console.error('Invalid balance format received:', balanceResponse.data);
+          toast.error('Error fetching balance', {
+            description: 'Unable to parse balance data',
+          });
         }
       }
     } catch (error) {
       console.error('Error fetching user balance:', error);
+      // Don't show toast for every failed balance check to avoid spamming the user
+      // Only show if it's a new session or first attempt
+      if (loading) {
+        toast.error('Error fetching balance', {
+          description: 'Please try refreshing the page',
+        });
+      }
     }
-  }, [user, getUsername]);
+  }, [user, getUsername, loading]);
 
   const refreshUserData = useCallback(async () => {
     if (!user) {
@@ -113,14 +125,14 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('Retrieved user order history:', orderHistoryResponse.data.orders);
         
         const mappedOrders = orderHistoryResponse.data.orders.map((order: any) => ({
-          id: order.parent_order_id.toString(),
+          id: order.parent_order_id?.toString() || '',
           ticker: order.ticker || '',
           type: (order.order_type === 'buy' ? 'Buy' : 'Sell') as OrderType,
           executionType: 'Market' as OrderExecutionType,
-          price: order.price || 0,
-          size: order.shares || 0,
+          price: parseFloat(order.price) || 0,
+          size: parseInt(order.shares) || 0,
           status: order.status === 'completed' ? 'Completed' : 'In-Progress' as OrderStatus,
-          timestamp: new Date(order.created_at || Date.now()),
+          timestamp: new Date(order.created_at || order.order_time || Date.now()),
         }));
         
         setOrders(mappedOrders);

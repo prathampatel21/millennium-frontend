@@ -17,46 +17,74 @@ const OrderStatus = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Fetch order status data when component mounts
-  useEffect(() => {
-    const fetchOrderStatus = async () => {
-      try {
-        const username = getUsername();
-        if (!username) {
-          toast.error('User information not available');
-          setLoading(false);
-          return;
-        }
+  const fetchOrderStatus = async () => {
+    try {
+      const username = getUsername();
+      if (!username) {
+        toast.error('User information not available');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Fetching order status for user:', username);
+      const response = await axios.get(`${API_BASE_URL}/users/${username}/orders/status`);
+      
+      if (response.data && Array.isArray(response.data.orders)) {
+        console.log('Retrieved user order status:', response.data.orders);
         
-        console.log('Fetching order status for user:', username);
-        const response = await axios.get(`${API_BASE_URL}/users/${username}/orders/status`);
-        
-        if (response.data && Array.isArray(response.data.orders)) {
-          console.log('Retrieved user order status:', response.data.orders);
+        const mappedOrders = response.data.orders.map((order: any) => {
+          // Log each order to help with debugging
+          console.log('Processing order:', order);
           
-          const mappedOrders = response.data.orders.map((order: any) => ({
-            id: order.order_id?.toString() || '',
+          // Ensure price and shares are properly parsed
+          let price = 0;
+          if (order.price !== undefined && order.price !== null) {
+            price = typeof order.price === 'string' ? parseFloat(order.price) : order.price;
+          } else if (order.execution_price !== undefined && order.execution_price !== null) {
+            price = typeof order.execution_price === 'string' ? parseFloat(order.execution_price) : order.execution_price;
+          }
+          
+          let shares = 0;
+          if (order.shares !== undefined && order.shares !== null) {
+            shares = typeof order.shares === 'string' ? parseInt(order.shares) : order.shares;
+          } else if (order.child_shares !== undefined && order.child_shares !== null) {
+            shares = typeof order.child_shares === 'string' ? parseInt(order.child_shares) : order.child_shares;
+          }
+          
+          return {
+            id: (order.order_id || order.parent_order_id || '').toString(),
             ticker: order.ticker || '',
             type: (order.order_type === 'buy' ? 'Buy' : 'Sell'),
             executionType: 'Market',
-            price: parseFloat(order.price) || 0,
-            size: parseInt(order.shares) || 0,
-            status: order.status === 'completed' ? 'Completed' : (order.status === 'processing' ? 'Processing' : 'In-Progress'),
-            timestamp: new Date(order.created_at || Date.now()),
-          }));
-          
-          setOrders(mappedOrders);
-        }
-      } catch (error) {
-        console.error('Error fetching order status:', error);
-        toast.error('Failed to load order status data');
-      } finally {
-        setLoading(false);
+            price: price || 0,
+            size: shares || 0,
+            status: order.status === 'completed' ? 'Completed' : 
+                    (order.status === 'processing' || order.parent_status === 'processing' ? 'Processing' : 'In-Progress'),
+            timestamp: new Date(order.created_at || order.order_placement_time || Date.now()),
+          };
+        });
+        
+        setOrders(mappedOrders);
       }
-    };
-    
+    } catch (error) {
+      console.error('Error fetching order status:', error);
+      toast.error('Failed to load order status data');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Fetch order status data when component mounts
+  useEffect(() => {
     fetchOrderStatus();
     refreshUserData();
+    
+    // Poll for updates every 10 seconds
+    const intervalId = setInterval(() => {
+      fetchOrderStatus();
+    }, 10000);
+    
+    return () => clearInterval(intervalId);
   }, [getUsername, refreshUserData]);
   
   const processingOrders = orders.filter(order => order.status === 'Processing');

@@ -75,32 +75,23 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('Fetching balance for user:', username);
       const balanceResponse = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
-      
+
       if (balanceResponse.data) {
-        // Check if balance property exists and is a number
-        if (typeof balanceResponse.data.balance === 'number' || 
-            typeof balanceResponse.data.balance === 'string' && !isNaN(parseFloat(balanceResponse.data.balance))) {
-          const balanceValue = parseFloat(balanceResponse.data.balance);
+        console.log('Balance response payload:', balanceResponse.data);
+
+        const balanceValue = parseFloat(balanceResponse.data.balance);
+
+        if (!isNaN(balanceValue)) {
           console.log('Retrieved user balance:', balanceValue);
           setBalanceState(balanceValue);
         } else {
-          console.error('Invalid balance format received:', balanceResponse.data);
-          toast.error('Error fetching balance', {
-            description: 'Unable to parse balance data',
-          });
+          console.error('Invalid balance value received:', balanceResponse.data.balance);
         }
       }
     } catch (error) {
       console.error('Error fetching user balance:', error);
-      // Don't show toast for every failed balance check to avoid spamming the user
-      // Only show if it's a new session or first attempt
-      if (loading) {
-        toast.error('Error fetching balance', {
-          description: 'Please try refreshing the page',
-        });
-      }
     }
-  }, [user, getUsername, loading]);
+  }, [user, getUsername]);
 
   const refreshUserData = useCallback(async () => {
     if (!user) {

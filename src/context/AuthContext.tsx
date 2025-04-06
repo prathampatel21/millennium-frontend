@@ -50,6 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const checkUserInMySQL = async (username: string) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
+      
       console.log('User found in MySQL database:', response.data);
       return response.data;
     } catch (error: any) {

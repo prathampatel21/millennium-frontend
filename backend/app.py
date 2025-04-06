@@ -18,13 +18,23 @@ supabase_key = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
 def convert_decimal_to_float(data):
+    from decimal import Decimal
+
+    # if isinstance(data, Decimal):
+    #     return float(data)
+
     if isinstance(data, list):
         return [convert_decimal_to_float(item) for item in data]
+
     elif isinstance(data, dict):
-        return {key: float(value) if isinstance(value, Decimal) else convert_decimal_to_float(value) if isinstance(value, (dict, list)) else value for key, value in data.items()}
+        return {key: convert_decimal_to_float(value) for key, value in data.items()}
     elif isinstance(data, Decimal):
         return float(data)
-    return data
+    else:
+        return data
+
+    return data  # base case: int, float, str, None, etc.
+
 
 # User routes
 @app.route('/users', methods=['POST'])
@@ -66,36 +76,60 @@ def update_balance(username):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# # New route: Get User Balance via stored procedure
+# @app.route('/users/<string:username>/balance', methods=['GET'])
+# def get_balance(username):
+#     try:
+#         # Call the RPC function to get user balance
+#         response = supabase.rpc('get_user_balance', {'p_username': username}).execute()
+        
+#         if not response.data:
+#             return jsonify({"error": "User not found"}), 404
+        
+#         # Handle the response data properly
+#         # The response.data should be a single numeric value, not an object
+#         if isinstance(response.data, (int, float, Decimal)):
+#             balance = float(response.data)
+#             return jsonify({"username": username, "balance": balance}), 200
+#         else:
+#             print(f"Unexpected balance data type: {type(response.data)}, value: {response.data}")
+#             # Try to convert the data to a float if possible
+#             try:
+#                 if isinstance(response.data, dict) and 'balance' in response.data:
+#                     balance = float(response.data['balance'])
+#                 else:
+#                     balance = float(response.data)
+#                 return jsonify({"username": username, "balance": balance}), 200
+#             except (ValueError, TypeError) as e:
+#                 print(f"Error converting balance to float: {e}")
+#                 return jsonify({"error": f"Invalid balance data: {response.data}"}), 500
+#     except Exception as e:
+#         print(f"Error in get_balance: {e}")
+#         return jsonify({"error": str(e)}), 500
 # New route: Get User Balance via stored procedure
 @app.route('/users/<string:username>/balance', methods=['GET'])
 def get_balance(username):
     try:
         # Call the RPC function to get user balance
         response = supabase.rpc('get_user_balance', {'p_username': username}).execute()
-        
+
         if not response.data:
             return jsonify({"error": "User not found"}), 404
-        
-        # Handle the response data properly
-        # The response.data should be a single numeric value, not an object
-        if isinstance(response.data, (int, float, Decimal)):
-            balance = float(response.data)
-            return jsonify({"username": username, "balance": balance}), 200
+
+        # If Supabase returned a list with 1 dict:
+        raw_balance = response.data
+        if isinstance(raw_balance, list) and len(raw_balance) > 0:
+            balance = raw_balance[0].get('balance')
         else:
-            print(f"Unexpected balance data type: {type(response.data)}, value: {response.data}")
-            # Try to convert the data to a float if possible
-            try:
-                if isinstance(response.data, dict) and 'balance' in response.data:
-                    balance = float(response.data['balance'])
-                else:
-                    balance = float(response.data)
-                return jsonify({"username": username, "balance": balance}), 200
-            except (ValueError, TypeError) as e:
-                print(f"Error converting balance to float: {e}")
-                return jsonify({"error": f"Invalid balance data: {response.data}"}), 500
+            balance = None
+
+        return jsonify({"username": username, "balance": convert_decimal_to_float(balance)}), 200
+
     except Exception as e:
-        print(f"Error in get_balance: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+
 
 @app.route('/users/<string:username>/portfolio', methods=['GET'])
 def get_portfolio(username):

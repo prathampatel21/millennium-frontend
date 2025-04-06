@@ -75,12 +75,10 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('Fetching balance for user:', username);
       const balanceResponse = await axios.get(`${API_BASE_URL}/users/${username}/balance`);
-
+      
       if (balanceResponse.data) {
-        console.log('Balance response payload:', balanceResponse.data);
-
         const balanceValue = parseFloat(balanceResponse.data.balance);
-
+        
         if (!isNaN(balanceValue)) {
           console.log('Retrieved user balance:', balanceValue);
           setBalanceState(balanceValue);
@@ -116,14 +114,14 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('Retrieved user order history:', orderHistoryResponse.data.orders);
         
         const mappedOrders = orderHistoryResponse.data.orders.map((order: any) => ({
-          id: order.parent_order_id?.toString() || '',
+          id: order.parent_order_id.toString(),
           ticker: order.ticker || '',
           type: (order.order_type === 'buy' ? 'Buy' : 'Sell') as OrderType,
           executionType: 'Market' as OrderExecutionType,
-          price: parseFloat(order.price) || 0,
-          size: parseInt(order.shares) || 0,
+          price: order.price || 0,
+          size: order.shares || 0,
           status: order.status === 'completed' ? 'Completed' : 'In-Progress' as OrderStatus,
-          timestamp: new Date(order.created_at || order.order_time || Date.now()),
+          timestamp: new Date(order.created_at || Date.now()),
         }));
         
         setOrders(mappedOrders);
@@ -218,11 +216,23 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
       
+      // Calculate total amount from price per share * number of shares
+      const totalAmount = newOrder.price * newOrder.size;
+      
+      console.log('Creating order with:', {
+        ticker: newOrder.ticker,
+        shares: newOrder.size,
+        price: newOrder.price,
+        totalAmount: totalAmount,
+        type: newOrder.type.toLowerCase()
+      });
+      
       const orderResponse = await axios.post(`${API_BASE_URL}/orders/parent`, {
         ticker: newOrder.ticker,
         shares: newOrder.size,
         type: newOrder.type.toLowerCase(),
-        amount: newOrder.price * newOrder.size,
+        amount: totalAmount,
+        price: newOrder.price, // Make sure price per share is passed
         username: username
       });
       
@@ -309,3 +319,4 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     </OrderContext.Provider>
   );
 };
+

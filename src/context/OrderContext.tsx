@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
@@ -111,9 +110,12 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         }));
         
         setHoldings(mappedHoldings);
+      } else {
+        setHoldings([]);
       }
     } catch (error) {
       console.error('Error fetching user holdings:', error);
+      setHoldings([]);
     }
   }, [user, getUsername]);
 
@@ -134,23 +136,29 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
       
       await fetchUserBalance();
       
-      const orderHistoryResponse = await axios.get(`${API_BASE_URL}/users/${username}/orders/history`);
-      
-      if (orderHistoryResponse.data && Array.isArray(orderHistoryResponse.data.orders)) {
-        console.log('Retrieved user order history:', orderHistoryResponse.data.orders);
+      try {
+        const orderHistoryResponse = await axios.get(`${API_BASE_URL}/users/${username}/orders/history`);
         
-        const mappedOrders = orderHistoryResponse.data.orders.map((order: any) => ({
-          id: order.parent_order_id.toString(),
-          ticker: order.ticker || '',
-          type: (order.order_type === 'buy' ? 'Buy' : 'Sell') as OrderType,
-          executionType: 'Market' as OrderExecutionType,
-          price: order.price || 0,
-          size: order.shares || 0,
-          status: order.status === 'completed' ? 'Completed' : 'In-Progress' as OrderStatus,
-          timestamp: new Date(order.created_at || Date.now()),
-        }));
-        
-        setOrders(mappedOrders);
+        if (orderHistoryResponse.data && Array.isArray(orderHistoryResponse.data.orders)) {
+          console.log('Retrieved user order history:', orderHistoryResponse.data.orders);
+          
+          const mappedOrders = orderHistoryResponse.data.orders.map((order: any) => ({
+            id: order.parent_order_id.toString(),
+            ticker: order.ticker || '',
+            type: (order.order_type === 'buy' ? 'Buy' : 'Sell') as OrderType,
+            executionType: 'Market' as OrderExecutionType,
+            price: order.price || 0,
+            size: order.shares || 0,
+            status: order.status === 'completed' ? 'Completed' : 'In-Progress' as OrderStatus,
+            timestamp: new Date(order.created_at || Date.now()),
+          }));
+          
+          setOrders(mappedOrders);
+        } else {
+          setOrders([]);
+        }
+      } catch (error) {
+        console.error('Error fetching order history:', error);
       }
       
       await fetchUserHoldings();
@@ -158,7 +166,7 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error('Error fetching user data in OrderContext:', error);
       toast.error('Failed to load user data', {
-        description: 'Please try refreshing the page',
+        description: 'Database connection error. Please try again later.',
       });
     } finally {
       setLoading(false);
@@ -231,7 +239,6 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
       
-      // Calculate total cost for validation purposes only
       const totalCost = newOrder.price * newOrder.size;
       
       console.log('Creating order with:', {
@@ -241,12 +248,11 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         type: newOrder.type.toLowerCase()
       });
       
-      // Send only the price per share as the amount, not the total cost
       const orderResponse = await axios.post(`${API_BASE_URL}/orders/parent`, {
         ticker: newOrder.ticker,
         shares: newOrder.size,
         type: newOrder.type.toLowerCase(),
-        amount: newOrder.price, // Changed from totalAmount to just the price per share
+        amount: newOrder.price,
         price: newOrder.price,
         username: username
       });
@@ -265,7 +271,7 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error('Error creating order:', error);
       toast.error('Failed to place order', {
-        description: 'Please try again later',
+        description: 'Database connection error. Please try again later.',
       });
       return false;
     }
@@ -302,7 +308,9 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
       await fetchUserBalance();
     } catch (error) {
       console.error('Error updating balance:', error);
-      toast.error('Failed to update balance');
+      toast.error('Failed to update balance', {
+        description: 'Database connection error. Please try again later.',
+      });
     }
   };
 

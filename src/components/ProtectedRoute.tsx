@@ -36,30 +36,83 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
             p_username: username
           });
           
-          if (error) throw error;
+          if (error) {
+            console.error('Supabase DB error:', error);
+            
+            // If there's a permission error, we'll assume the user is authorized
+            // but show a toast about limited functionality
+            if (error.code === '42501') { // Permission denied error
+              console.log('Permission denied for table access, but user is authenticated');
+              toast.warning('Database permission issues detected', {
+                description: 'Some features may be limited. Please contact support.',
+                duration: 5000,
+              });
+              setAuthorized(true);
+              setVerifying(false);
+              return;
+            }
+            
+            throw error;
+          }
           
           console.log('User verification response:', data);
           setAuthorized(true);
-        } catch (error) {
+        } catch (error: any) {
           console.log('User not found in Supabase, creating new user with default balance of 20');
           
-          // User doesn't exist in Supabase, create a new user with default balance of 20
-          const { error: createError } = await supabase.rpc('create_user', {
-            p_username: username,
-            initial_balance: 20
-          });
-          
-          if (createError) throw createError;
-          
-          console.log('Created new user in Supabase');
-          toast.success('Welcome! Your account has been created with $20 starting balance', {
-            duration: 5000
-          });
-          setAuthorized(true);
+          try {
+            // User doesn't exist in Supabase, create a new user with default balance of 20
+            const { error: createError } = await supabase.rpc('create_user', {
+              p_username: username,
+              initial_balance: 20
+            });
+            
+            if (createError) {
+              // If there's a permission error, handle it gracefully
+              if (createError.code === '42501') { // Permission denied error
+                console.log('Permission denied for table creation, but user is authenticated');
+                toast.warning('Database permission issues detected', {
+                  description: 'Some features may be limited. Please contact support.',
+                  duration: 5000,
+                });
+                setAuthorized(true);
+                setVerifying(false);
+                return;
+              }
+              
+              throw createError;
+            }
+            
+            console.log('Created new user in Supabase');
+            toast.success('Welcome! Your account has been created with $20 starting balance', {
+              duration: 5000
+            });
+            setAuthorized(true);
+          } catch (createError: any) {
+            console.error('Error creating user in Supabase:', createError);
+            
+            // Still allow access if just database permission issues
+            if (createError.code === '42501') {
+              setAuthorized(true);
+            } else {
+              setAuthorized(false);
+            }
+          }
         }
       } catch (error: any) {
         console.error('Error verifying/creating user in Supabase database:', error);
-        setAuthorized(false);
+        
+        // If the user is authenticated but has database issues, still let them in
+        // but with a warning toast
+        if (user) {
+          toast.warning('Database connection issues', {
+            description: 'You are logged in but database access is limited. Some features may not work properly.',
+            duration: 5000
+          });
+          setAuthorized(true);
+        } else {
+          setAuthorized(false);
+        }
       } finally {
         setVerifying(false);
       }

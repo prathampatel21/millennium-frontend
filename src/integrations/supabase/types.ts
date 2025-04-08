@@ -163,27 +163,6 @@ export type Database = {
           },
         ]
       }
-      profiles: {
-        Row: {
-          created_at: string | null
-          id: string
-          updated_at: string | null
-          username: string
-        }
-        Insert: {
-          created_at?: string | null
-          id: string
-          updated_at?: string | null
-          username: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          updated_at?: string | null
-          username?: string
-        }
-        Relationships: []
-      }
       transaction: {
         Row: {
           buyer_username: string
@@ -288,22 +267,6 @@ export type Database = {
           parent_order_id: number | null
           parent_status: Database["public"]["Enums"]["order_status"] | null
           ticker: string | null
-          username: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "parent_order_username_fkey"
-            columns: ["username"]
-            isOneToOne: false
-            referencedRelation: "app_user"
-            referencedColumns: ["username"]
-          },
-        ]
-      }
-      user_stock_holdings: {
-        Row: {
-          ticker: string | null
-          total_shares: number | null
           username: string | null
         }
         Relationships: [

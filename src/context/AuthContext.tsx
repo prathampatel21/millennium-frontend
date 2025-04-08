@@ -37,12 +37,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return response.data;
     } catch (error: any) {
       console.error('Error creating user in MySQL:', error);
+      
       // If error contains "Duplicate entry", user already exists which is fine
       if (error.response?.data?.error?.includes('Duplicate entry')) {
         console.log('User already exists in MySQL database');
         return null;
       }
-      throw error;
+      
+      // Show a more user-friendly error message
+      toast.error('Error connecting to trading database', {
+        description: 'User authentication successful, but database synchronization failed. Some features may be limited.',
+      });
+      
+      return null;
     }
   };
 
@@ -57,8 +64,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('User not found in MySQL database, creating new user');
         return await createUserInMySQL(username);
       }
+      
       console.error('Error checking user in MySQL:', error);
-      throw error;
+      
+      // Show a more user-friendly error message
+      toast.error('Error connecting to trading database', {
+        description: 'Authentication successful, but database connection failed. Some features may be limited.',
+      });
+      
+      return null;
     }
   };
 

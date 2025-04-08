@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
@@ -23,7 +22,7 @@ export interface Order {
   timestamp: Date;
 }
 
-interface StockHolding {
+export interface StockHolding {
   ticker: string;
   quantity: number;
 }
@@ -92,6 +91,31 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [user, getUsername]);
 
+  const fetchUserHoldings = useCallback(async () => {
+    if (!user) return;
+    
+    const username = getUsername();
+    if (!username) return;
+    
+    try {
+      console.log('Fetching holdings for user:', username);
+      const response = await axios.get(`${API_BASE_URL}/users/${username}/holdings`);
+      
+      if (response.data && response.data.holdings) {
+        console.log('Retrieved user holdings:', response.data.holdings);
+        
+        const mappedHoldings = response.data.holdings.map((holding: any) => ({
+          ticker: holding.ticker || '',
+          quantity: holding.total_shares || 0,
+        }));
+        
+        setHoldings(mappedHoldings);
+      }
+    } catch (error) {
+      console.error('Error fetching user holdings:', error);
+    }
+  }, [user, getUsername]);
+
   const refreshUserData = useCallback(async () => {
     if (!user) {
       setLoading(false);
@@ -128,18 +152,7 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         setOrders(mappedOrders);
       }
       
-      const portfolioResponse = await axios.get(`${API_BASE_URL}/users/${username}/portfolio`);
-      
-      if (portfolioResponse.data?.user_summary?.holdings && Array.isArray(portfolioResponse.data.user_summary.holdings)) {
-        console.log('Retrieved user holdings:', portfolioResponse.data.user_summary.holdings);
-        
-        const mappedHoldings = portfolioResponse.data.user_summary.holdings.map((holding: any) => ({
-          ticker: holding.ticker || '',
-          quantity: holding.shares || 0,
-        }));
-        
-        setHoldings(mappedHoldings);
-      }
+      await fetchUserHoldings();
       
     } catch (error) {
       console.error('Error fetching user data in OrderContext:', error);
@@ -149,7 +162,7 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, [user, getUsername, fetchUserBalance]);
+  }, [user, getUsername, fetchUserBalance, fetchUserHoldings]);
 
   useEffect(() => {
     if (user) {
@@ -217,7 +230,6 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
       
-      // Calculate total amount from price per share * number of shares
       const totalAmount = newOrder.price * newOrder.size;
       
       console.log('Creating order with:', {
@@ -233,7 +245,7 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         shares: newOrder.size,
         type: newOrder.type.toLowerCase(),
         amount: totalAmount,
-        price: newOrder.price, // Make sure price per share is passed
+        price: newOrder.price,
         username: username
       });
       
@@ -320,4 +332,3 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     </OrderContext.Provider>
   );
 };
-

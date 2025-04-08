@@ -1,4 +1,3 @@
-
 from decimal import Decimal
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -264,6 +263,17 @@ def get_user_order_history(username):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
+@app.route('/users/<string:username>/holdings', methods=['GET'])
+def get_user_holdings(username):
+    try:
+        # Query the user_stock_holdings view
+        response = supabase.table('user_stock_holdings').select('*').eq('username', username).execute()
+        holdings = response.data
+        
+        return jsonify({"holdings": convert_decimal_to_float(holdings)}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
 @app.route('/springMessage', methods=['GET'])
 def spring_message():
     return jsonify({"message": "Hello from Flask!"}), 200
@@ -312,8 +322,6 @@ def order_filled():
     data = request.json
     print("✅ Flask received order fill notification:", data)
     return jsonify({"status": "ok"}), 200
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)

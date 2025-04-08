@@ -12,6 +12,14 @@ import {
   CardTitle,
   CardContent
 } from '@/components/ui/card';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell
+} from '@/components/ui/table';
 
 // Define API base URL
 const API_BASE_URL = 'http://127.0.0.1:5000';
@@ -227,7 +235,7 @@ const ProfileInfo: React.FC = () => {
         </div>
       </div>
       
-      {/* Center/Right Column - Stock Holdings (replacing Recently Completed Orders) */}
+      {/* Right Column - Stock Holdings */}
       <div className="lg:col-span-2">
         <Card className="shadow-md animate-fade-in">
           <CardHeader className="bg-gray-50 border-b">
@@ -238,25 +246,22 @@ const ProfileInfo: React.FC = () => {
           </CardHeader>
           <CardContent className="p-6">
             {holdings.length > 0 ? (
-              <div className="space-y-4">
-                {holdings.map((holding) => (
-                  <div key={holding.ticker} className="glass rounded-xl p-4 flex justify-between items-center">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
-                        <Briefcase className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">{holding.ticker}</h4>
-                        <p className="text-sm text-gray-500">Stock</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900">{holding.quantity}</p>
-                      <p className="text-sm text-gray-500">Shares</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ticker</TableHead>
+                    <TableHead className="text-right">Shares</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {holdings.map((holding) => (
+                    <TableRow key={holding.ticker}>
+                      <TableCell className="font-medium">{holding.ticker}</TableCell>
+                      <TableCell className="text-right">{holding.quantity}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             ) : (
               <div className="text-center py-8 bg-gray-50 rounded-lg">
                 <Briefcase className="h-10 w-10 text-gray-400 mx-auto mb-2" />

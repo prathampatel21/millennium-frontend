@@ -309,19 +309,28 @@ def relay_to_springboot():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/orderCompletedFromSpring', methods=['POST'])
+@app.route('/orderMatchedFromSpring', methods=['POST'])
 def order_completed_from_spring():
     data = request.json
     print("✅ Flask received order completion notice:", data)
 
-    return jsonify({"status": "received"}), 200
+    order_id = data.get("order_id")
+    if not order_id:
+        return jsonify({"error": "Missing order_id"}), 400
 
+    try:
+        # Call Supabase RPC to mark parent order completed
+        print('hi, below is the order id')
+        print(order_id)
+        response = supabase.rpc("complete_parent_order", {
+            "in_porderid": int(order_id)
+        }).execute()
+        print(response)
 
-@app.route('/orderMatchedFromSpring', methods=['POST'])
-def order_filled():
-    data = request.json
-    print("✅ Flask received order fill notification:", data)
-    return jsonify({"status": "ok"}), 200
+        return jsonify({"status": "Parent order marked as completed"}), 200
+    except Exception as e:
+        print("❌ Failed to update status:", e)
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

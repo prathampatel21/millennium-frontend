@@ -39,12 +39,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           if (error) {
             console.error('Supabase DB error:', error);
             
-            // If there's a permission error, we'll assume the user is authorized
-            // but show a toast about limited functionality
-            if (error.code === '42501') { // Permission denied error
-              console.log('Permission denied for table access, but user is authenticated');
-              toast.warning('Database permission issues detected', {
-                description: 'Some features may be limited. Please contact support.',
+            // Handle both permission errors and missing table/view errors
+            if (error.code === '42501' || error.code === '42P01') {
+              console.log('Database permission issues or missing tables detected, but user is authenticated');
+              toast.warning('Database configuration issues detected', {
+                description: 'Some features may be limited. The application will continue to work with reduced functionality.',
                 duration: 5000,
               });
               setAuthorized(true);
@@ -58,7 +57,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           console.log('User verification response:', data);
           setAuthorized(true);
         } catch (error: any) {
-          console.log('User not found in Supabase, creating new user with default balance of 20');
+          // If we reach here, user doesn't exist in Supabase or there was another error
+          console.log('User not found in Supabase or database error, creating new user with default balance of 20');
           
           try {
             // User doesn't exist in Supabase, create a new user with default balance of 20
@@ -68,11 +68,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
             });
             
             if (createError) {
-              // If there's a permission error, handle it gracefully
-              if (createError.code === '42501') { // Permission denied error
-                console.log('Permission denied for table creation, but user is authenticated');
-                toast.warning('Database permission issues detected', {
-                  description: 'Some features may be limited. Please contact support.',
+              // Handle both permission errors and missing table/view errors
+              if (createError.code === '42501' || createError.code === '42P01') {
+                console.log('Database permission or structure issues detected, but user is authenticated');
+                toast.warning('Database configuration issues detected', {
+                  description: 'Some features may be limited. The application will continue to work with reduced functionality.',
                   duration: 5000,
                 });
                 setAuthorized(true);
@@ -91,11 +91,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           } catch (createError: any) {
             console.error('Error creating user in Supabase:', createError);
             
-            // Still allow access if just database permission issues
-            if (createError.code === '42501') {
+            // Still allow access if there are database permission or structure issues
+            if (createError.code === '42501' || createError.code === '42P01') {
               setAuthorized(true);
             } else {
               setAuthorized(false);
+              toast.error('Failed to create user account', {
+                description: 'Please try again later or contact support.',
+                duration: 5000
+              });
             }
           }
         }
@@ -106,7 +110,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         // but with a warning toast
         if (user) {
           toast.warning('Database connection issues', {
-            description: 'You are logged in but database access is limited. Some features may not work properly.',
+            description: 'You are logged in but database access is limited. The application will continue to work with reduced functionality.',
             duration: 5000
           });
           setAuthorized(true);

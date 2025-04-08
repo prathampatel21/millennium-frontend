@@ -5,6 +5,7 @@ from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
+import requests
 
 # Load environment variables
 load_dotenv()
@@ -138,14 +139,19 @@ def create_parent_order():
         order_query = supabase.table('parent_order').select('porderid').order('porderid', desc=True).limit(1).execute()
         order_id = order_query.data[0]['porderid'] if order_query.data else None
         
-        return jsonify({
+        parent_order_payload = {
             "order_id": order_id,
             "ticker": ticker,
             "shares": shares,
             "type": order_type,
             "amount": convert_decimal_to_float(amount),
             "username": username
-        }), 201
+        }
+
+
+        relay_url = "http://127.0.0.1:5000/relayToSpringBoot"
+        requests.post(relay_url, json=parent_order_payload)
+        return jsonify(parent_order_payload), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -257,6 +263,57 @@ def get_user_order_history(username):
         return jsonify({"orders": transformed_orders}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/springMessage', methods=['GET'])
+def spring_message():
+    return jsonify({"message": "Hello from Flask!"}), 200
+
+@app.route('/messageFromSpring', methods=['POST'])
+def receive_spring_message():
+    data = request.json
+    message = data.get('message')
+
+    if not message:
+        return jsonify({"error": "No message provided"}), 400
+
+    print(f"Received message from Spring Boot: {message}")
+    
+    response_message = f"Flask received your message: '{message}'"
+    return jsonify({"response": response_message}), 200
+
+@app.route('/relayToSpringBoot', methods=['POST'])
+def relay_to_springboot():
+    data = request.json
+
+    import requests
+
+    try:
+        spring_url = "http://localhost:8081/receiveParentOrder"
+        headers = {"Content-Type": "application/json"}
+        spring_response = requests.post(spring_url, json=data, headers=headers)
+
+        if spring_response.status_code != 200:
+            return jsonify({"error": f"Failed to notify Spring Boot: {spring_response.text}"}), 500
+
+        return jsonify({"status": "success", "spring_response": spring_response.json()}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/orderCompletedFromSpring', methods=['POST'])
+def order_completed_from_spring():
+    data = request.json
+    print("✅ Flask received order completion notice:", data)
+
+    return jsonify({"status": "received"}), 200
+
+
+@app.route('/orderMatchedFromSpring', methods=['POST'])
+def order_filled():
+    data = request.json
+    print("✅ Flask received order fill notification:", data)
+    return jsonify({"status": "ok"}), 200
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

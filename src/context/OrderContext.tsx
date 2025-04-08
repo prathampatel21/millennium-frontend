@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
@@ -230,21 +231,22 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
       
-      const totalAmount = newOrder.price * newOrder.size;
+      // Calculate total cost for validation purposes only
+      const totalCost = newOrder.price * newOrder.size;
       
       console.log('Creating order with:', {
         ticker: newOrder.ticker,
         shares: newOrder.size,
         price: newOrder.price,
-        totalAmount: totalAmount,
         type: newOrder.type.toLowerCase()
       });
       
+      // Send only the price per share as the amount, not the total cost
       const orderResponse = await axios.post(`${API_BASE_URL}/orders/parent`, {
         ticker: newOrder.ticker,
         shares: newOrder.size,
         type: newOrder.type.toLowerCase(),
-        amount: totalAmount,
+        amount: newOrder.price, // Changed from totalAmount to just the price per share
         price: newOrder.price,
         username: username
       });

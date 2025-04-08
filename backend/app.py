@@ -111,7 +111,7 @@ def create_parent_order():
     ticker = data.get('ticker')
     shares = data.get('shares')
     order_type = data.get('type')  # 'buy' or 'sell'
-    amount = data.get('amount')
+    amount = data.get('amount')    # Now this is just price per share, not total cost
     username = data.get('username')
     
     # Validate inputs
@@ -126,11 +126,12 @@ def create_parent_order():
     
     try:
         # Call the RPC function to create a parent order
+        # Note: amount now represents price per share
         response = supabase.rpc('create_parent_order', {
             'p_ticker': ticker, 
             'p_shares': shares, 
             'p_type': order_type, 
-            'p_amount': amount, 
+            'p_amount': amount,  # This is now just the price per share 
             'p_username': username
         }).execute()
         
@@ -143,10 +144,9 @@ def create_parent_order():
             "ticker": ticker,
             "shares": shares,
             "type": order_type,
-            "amount": convert_decimal_to_float(amount),
+            "amount": convert_decimal_to_float(amount),  # Now just the price per share
             "username": username
         }
-
 
         relay_url = "http://127.0.0.1:5000/relayToSpringBoot"
         requests.post(relay_url, json=parent_order_payload)

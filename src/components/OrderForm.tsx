@@ -104,6 +104,8 @@ const OrderForm: React.FC = () => {
         throw new Error('User not authenticated');
       }
       
+      // Note: addOrder now sends just the price per share as the amount
+      // but still validates total cost against balance
       const orderSuccess = await addOrder({
         ticker: formData.ticker.toUpperCase(),
         type: formData.type as 'Buy' | 'Sell',

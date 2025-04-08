@@ -40,8 +40,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
             console.error('Supabase DB error:', error);
             
             // Handle both permission errors and missing table/view errors
-            if (error.code === '42501' || error.code === '42P01') {
-              console.log('Database permission issues or missing tables detected, but user is authenticated');
+            if (error.code === '42501' || error.code === '42P01' || error.code === '42883') {
+              console.log('Database permission issues, missing tables, or function not found detected, but user is authenticated');
               toast.warning('Database configuration issues detected', {
                 description: 'Some features may be limited. The application will continue to work with reduced functionality.',
                 duration: 5000,
@@ -68,8 +68,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
             });
             
             if (createError) {
-              // Handle both permission errors and missing table/view errors
-              if (createError.code === '42501' || createError.code === '42P01') {
+              // Handle various error types
+              if (createError.code === '42501' || createError.code === '42P01' || createError.code === '42883') {
                 console.log('Database permission or structure issues detected, but user is authenticated');
                 toast.warning('Database configuration issues detected', {
                   description: 'Some features may be limited. The application will continue to work with reduced functionality.',
@@ -92,7 +92,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
             console.error('Error creating user in Supabase:', createError);
             
             // Still allow access if there are database permission or structure issues
-            if (createError.code === '42501' || createError.code === '42P01') {
+            if (createError.code === '42501' || createError.code === '42P01' || createError.code === '42883') {
               setAuthorized(true);
             } else {
               setAuthorized(false);

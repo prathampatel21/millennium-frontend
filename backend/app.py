@@ -315,10 +315,14 @@ def order_completed_from_spring():
     print("✅ Flask received order completion notice:", data)
 
     order_id = data.get("order_id")
-    if not order_id:
-        return jsonify({"error": "Missing order_id"}), 400
+    username = data.get("username")
+    amount_action = data.get("amountAction")  # match key exactly
+
+    if not order_id or not username or amount_action is None:
+        return jsonify({"error": "Missing required fields"}), 400
 
     try:
+
         # Call Supabase RPC to mark parent order completed
         print('hi, below is the order id')
         print(order_id)
@@ -327,10 +331,39 @@ def order_completed_from_spring():
         }).execute()
         print(response)
 
-        return jsonify({"status": "Parent order marked as completed"}), 200
+        # STEP 1: Fetch current balance from your own Flask route
+        balance_response = requests.get(f"http://127.0.0.1:5000/users/{username}/balance")
+        balance_data = balance_response.json()
+
+        if "balance" not in balance_data:
+            return jsonify({"error": "Could not retrieve current balance"}), 500
+
+        current_balance = float(balance_data["balance"])
+
+        # STEP 2: Calculate new balance
+        new_balance = current_balance + (float(amount_action) * 2)
+
+        # STEP 3: Update balance using the existing PUT route
+        update_response = requests.put(
+            f"http://127.0.0.1:5000/users/{username}/balance",
+            json={"balance": new_balance},
+            headers={"Content-Type": "application/json"}
+        )
+
+        if update_response.status_code != 200:
+            return jsonify({"error": "Failed to update balance"}), 500
+
+        return jsonify({
+            "status": "✅ Parent order marked as completed and balance updated.",
+            "username": username,
+            "old_balance": current_balance,
+            "amount_added": amount_action,
+            "new_balance": new_balance
+        }), 200
     except Exception as e:
-        print("❌ Failed to update status:", e)
+        print("❌ Failed to update status or balance:", e)
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)

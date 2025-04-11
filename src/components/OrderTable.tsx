@@ -117,7 +117,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    ${order.price.toFixed(2)}
+                    ${(order.price*order.size).toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                     {order.size}
